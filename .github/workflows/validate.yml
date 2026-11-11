@@ -1,0 +1,69 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  skill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          python - <<'PY'
+          import re, sys, pathlib
+          text = pathlib.Path("SKILL.md").read_text(encoding="utf-8")
+          if not text.startswith("---"):
+              sys.exit("SKILL.md must start with YAML frontmatter")
+          fm = text.split("---", 2)[1]
+          name = re.search(r"^name:\s*(\S+)", fm, re.M)
+          desc = re.search(r"^description:\s*(.+)$", fm, re.M)
+          assert name, "frontmatter: missing name"
+          assert desc, "frontmatter: missing description"
+          assert re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name.group(1)), f"invalid skill name: {name.group(1)}"
+          assert 20 <= len(desc.group(1)) <= 1024, "description should be 20-1024 chars"
+          print("frontmatter ok:", name.group(1))
+          PY
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Audit the starter templates against the format rules
+        run: python scripts/check_single_file.py assets/*.html --strict
+
+      - name: Check translations exist
+        run: |
+          for f in README.md README.zh-CN.md README.ja.md README.ko.md LICENSE CHANGELOG.md; do
+            test -s "$f" || { echo "missing: $f"; exit 1; }
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: JavaScript syntax of every template and generated game
+        run: |
+          python - <<'PY'
+          import pathlib, re, subprocess, tempfile, os, sys
+          ok = True
+          for f in sorted(pathlib.Path("assets").glob("*.html")):
+              src = f.read_text(encoding="utf-8")
+              scripts = re.findall(r"<script>([\s\S]*?)</script>", src)
+              if not scripts:
+                  print(f"{f}: no inline script"); ok = False; continue
+              with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as t:
+                  t.write(scripts[-1]); path = t.name
+              r = subprocess.run(["node", "--check", path], capture_output=True, text=True)
+              os.unlink(path)
+              print(f"{f}: {'ok' if r.returncode == 0 else 'SYNTAX ERROR'}")
+              if r.returncode:
+                  print(r.stderr); ok = False
+          sys.exit(0 if ok else 1)
+          PY

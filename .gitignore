@@ -1,0 +1,18 @@
+# generated games
+*.tmp.html
+
+# local scratch
+.tmpgen/
+.tmpcheck/
+.sfg-tools/
+scratch/
+
+# python
+__pycache__/
+*.py[cod]
+
+# editors / os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
