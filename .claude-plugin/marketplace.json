@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "single-file-game",
+  "description": "Build a complete browser game as one self-contained HTML file — no assets, no build step, no network at runtime.",
+  "owner": {
+    "name": "mollyneko",
+    "url": "https://github.com/mollyneko"
+  },
+  "plugins": [
+    {
+      "name": "single-file-game",
+      "description": "Single-file, zero-asset browser game development: shell, scene machine, procedural art and audio, input parity, save, performance, release audit.",
+      "version": "1.0.0",
+      "source": "./",
+      "category": "development",
+      "keywords": ["game", "html", "canvas", "webgl", "procedural", "offline", "single-file"]
+    }
+  ]
+}

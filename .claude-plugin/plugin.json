@@ -1,0 +1,13 @@
+{
+  "name": "single-file-game",
+  "version": "1.0.0",
+  "description": "Build a complete browser game as one self-contained HTML file with zero external assets.",
+  "author": {
+    "name": "mollyneko",
+    "url": "https://github.com/mollyneko"
+  },
+  "homepage": "https://github.com/mollyneko/single-file-game",
+  "repository": "https://github.com/mollyneko/single-file-game",
+  "license": "MIT",
+  "keywords": ["game", "html", "canvas", "webgl", "procedural", "offline", "single-file", "skill"]
+}

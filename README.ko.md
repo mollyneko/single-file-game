@@ -1,0 +1,150 @@
+# Single-File Game
+
+**브라우저 게임을 HTML 파일 하나로 완성합니다. 에셋 없음, 빌드 없음, 실행 중 네트워크 없음.**
+
+[![validate](https://github.com/mollyneko/single-file-game/actions/workflows/validate.yml/badge.svg)](https://github.com/mollyneko/single-file-game/actions/workflows/validate.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-2f4b3f.svg)](LICENSE)
+
+[English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · **한국어**
+
+---
+
+## 무엇인가
+
+**에이전트 스킬**입니다(표준 `SKILL.md` 형식, 참고 문서·스크립트·실행 가능한 템플릿 포함).
+다루는 주제는 하나입니다 — 게임을 **자기완결적인 HTML 파일 하나**로 출시하는 일.
+
+플레이어가 보고 듣는 모든 것은 브라우저 안의 코드가 그 자리에서 생성합니다. 그림은 canvas나
+셰이더로 그리고, 소리는 WebAudio로 합성하며, 맵과 레벨은 시드와 표로 조립합니다. 파일은 더블클릭으로
+열리고, 오프라인에서도 동작하며, CDN이나 번들러, 다른 누군가의 서버 가동률에 의존하지 않습니다.
+
+"게임 만드는 법"을 설명하는 튜토리얼이 아닙니다. 실제 단일 파일 게임에서 뽑아내어 정말로 효과가 있는
+부분만 남긴 **실행 가능한 방법**과, 그 방법을 강제하는 도구 모음입니다.
+
+| 2D 템플릿 | 3D 템플릿 |
+| --- | --- |
+| ![2D starter](docs/starter-2d.png) | ![3D starter](docs/starter-3d.png) |
+| Canvas 2D · 28 KB · 수집·회피·점수·저장 | WebGL2 · 27 KB · 인스턴싱 + 후처리 그레이딩 |
+
+두 스크린샷 모두 `assets/`의 실제 템플릿을 네트워크를 끈 상태에서 `file://`로 실행한 화면입니다.
+
+## 네 가지 규칙
+
+각 규칙은 실패 유형 하나를 통째로 제거합니다.
+
+| 규칙 | 의미 | 없어지는 문제 |
+| --- | --- | --- |
+| **파일 하나** | `<style>` 하나, `<script>` 하나, 외부 `src`/`href` 없음 | 파일 누락, CDN 장애 |
+| **에셋 0** | 그림은 그리기, 소리는 합성, 텍스처는 굽기 | 404, 라이선스, "에셋 미포함" |
+| **빌드 없음** | 순수 ES를 그대로 열기 | 툴체인 표류, "내 PC에서는 되는데" |
+| **네트워크 없음** | 실행 중 원격 요청 없음 | 오프라인 실패, 프라이버시 문제 |
+
+## 빠른 시작
+
+```bash
+git clone git@github.com:mollyneko/single-file-game.git
+cd single-file-game
+
+# 1. 이미 플레이 가능한 게임 생성 (부팅·플레이·일시정지·저장 동작)
+python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
+
+# 2. GAME 블록을 교체하고 감사 실행
+python scripts/check_single_file.py orb-runner.html --strict
+
+# 3. 열기 — 더블클릭 또는:
+open orb-runner.html        # macOS
+start orb-runner.html       # Windows
+xdg-open orb-runner.html    # Linux
+```
+
+`--mode 3d`를 주면 WebGL2 경로가 됩니다. 두 템플릿 모두 완성된 껍데기입니다. 디자인 토큰, 부팅 화면,
+타이틀, HUD, 일시정지·결과 카드, 입력 레이어, 오디오 버스, 저장 버스, 에러 경계, 적응형 화질, 그리고
+당신의 규칙을 넣을 표시된 블록까지 들어 있습니다.
+
+## 스킬로 설치
+
+**Claude Code / 플러그인 마켓플레이스**
+
+```bash
+/plugin marketplace add mollyneko/single-file-game
+/plugin install single-file-game
+```
+
+**수동 설치 (`SKILL.md`를 읽을 수 있는 어떤 에이전트든)**
+
+```bash
+git clone git@github.com:mollyneko/single-file-game.git
+cp -r single-file-game ~/.claude/skills/single-file-game      # Claude Code
+cp -r single-file-game ~/.workbuddy/skills/single-file-game   # WorkBuddy
+```
+
+저장소 루트가 곧 스킬 본체입니다 — `SKILL.md` + `references/` + `scripts/` + `assets/`.
+
+## 구성
+
+```
+single-file-game/
+├── SKILL.md                    방법: 규칙, 절차, 색인, 안티패턴
+├── references/
+│   ├── architecture.md         파일 구조, 씬 머신, 루프 계약, 리사이즈와 DPR
+│   ├── procedural-art-2d.md    시드 팔레트, 도형 기본기, 타일 굽기, 이펙트
+│   ├── procedural-3d.md        WebGL2 구성, 생성 텍스처, 그레이딩, 화질 단계
+│   ├── procedural-audio.md     SFX 버스, 노이즈, 스텝 시퀀서 음악, 믹싱
+│   ├── input-and-mobile.md     단일 입력 의도, 터치 스틱, 포인터 락, 세이프 에어리어
+│   ├── state-and-persistence.md 저장 구조, 버전, 마이그레이션, 자동 저장
+│   ├── performance.md          프레임 예산, 굽기, 풀링, 적응형 화질
+│   ├── resilience-and-a11y.md  에러 경계, 단계적 축소, 모션 감소
+│   ├── design-language.md      토큰, 타입 스케일, 버튼, HUD 구성
+│   └── release-checklist.md    출시 전 체크리스트
+├── assets/
+│   ├── starter-2d.html         바로 실행되는 Canvas 게임 껍데기
+│   └── starter-3d.html         바로 실행되는 WebGL2 게임 껍데기
+├── scripts/
+│   ├── scaffold.py             템플릿에서 이름 있는 게임 생성
+│   └── check_single_file.py    규칙에 비추어 파일 감사
+├── docs/
+│   └── method.md               왜 이런 제약인지, 언제 쓰지 말아야 하는지
+└── tests/                      두 도구의 단위 테스트
+```
+
+## 6단계 방법
+
+1. **한 문장으로 범위를 정한다.** 루프 하나, 주 동작 하나, 실패 상태 하나, 재시작 하나.
+2. **껍데기를 먼저 만든다.** 토큰 → 부팅 → 타이틀 → 캔버스 → HUD → 화면들 → 에러 경계.
+3. **의존 순서로 시스템을 얹는다.** 루프와 리사이즈가 먼저, 입력이 다음, 게임플레이가 마지막.
+4. **콘텐츠는 데이터로.** 손으로 쓴 인스턴스가 아니라 표와 시드 생성기.
+5. **손맛은 의도적으로 설계한다.** 흔들림, 파티클, 팝, 클릭음, 대기 모션 — 모두 저렴하고 모두 점검 항목.
+6. **감사하고 넘긴다.** `check_single_file.py --strict`, 이어서 릴리스 체크리스트.
+
+근거는 [`docs/method.md`](docs/method.md), 실무 디테일은 [`SKILL.md`](SKILL.md)에 있습니다.
+
+## 도구
+
+| 명령 | 역할 |
+| --- | --- |
+| `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | 템플릿을 복사하고 제목·부팅 표기·저장 네임스페이스·강조색을 설정 |
+| `python scripts/check_single_file.py X.html --strict` | 원격 리소스, 네트워크 호출, 빠진 껍데기, 존재하지 않는 요소 ID, 과대 용량이면 실패 |
+| `python -m unittest discover -s tests -v` | 감사기와 스캐폴드를 정상/비정상 파일로 검증 |
+
+도구 모음의 핵심은 감사기입니다. 이 형식이 저지르기 쉬운 실수를 정확히 겨냥합니다. "일단" 추가한
+`<script src>`, 지우지 않은 `fetch`, HTML만 고치고 JS에 남겨 둔 요소 ID, 어느새 3 MB가 된 파일.
+
+```
+FAIL  game.html  (1284.6 KB)
+  x  <script src> found at line 12 — the file must work offline
+  x  referenced but missing ids: hud-score, btn-retry
+  !  no prefers-reduced-motion handling
+```
+
+## 쓰지 말아야 할 때
+
+경계는 솔직하게 긋습니다. 실시간 동기화 멀티플레이, 대량의 수작업 아트나 음악 라이브러리, 장기적인
+팀 개발과 파일 단위 리뷰, 레벨별 딥링크나 A/B 테스트가 필요하다면 일반적인 빌드와 에셋 파이프라인을
+쓰세요.
+
+프로토타입, 데모, 게임 잼, 교육, 사내 도구, 작은 제품에서는 파일 하나가 타협이 아닙니다. 아이디어에서
+플레이어까지의 가장 짧은 길입니다.
+
+## 라이선스
+
+MIT © [mollyneko](https://github.com/mollyneko)
