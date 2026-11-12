@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="color-scheme" content="dark">
-<title>Starter 3D — Single-File Game</title>
+<title>Duskline — Single-File Game</title>
 <style>
 :root{
-  --ink:#060d0b; --bone:#eae6da; --bone-dim:#9aa79e; --signal:#ffb454;
-  --line:#24332c; --panel:rgba(8,16,13,.78);
+  --ink:#07090b; --bone:#efe9dc; --dim:#8e9399; --signal:#ffb454;
+  --line:rgba(239,233,220,.14); --panel:rgba(10,12,15,.72);
   --f: system-ui,"Segoe UI","PingFang SC","Noto Sans CJK SC",sans-serif;
   --fn: ui-monospace,"SFMono-Regular",Menlo,monospace;
   --sat: env(safe-area-inset-top,0px); --sab: env(safe-area-inset-bottom,0px);
@@ -17,113 +17,178 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(--bone);font-family:var(--f);
   -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
-#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .hide{display:none!important}
 button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;-webkit-appearance:none;appearance:none}
 
+/* ---- HUD: thin, quiet, out of the frame's way ---- */
 #hud{position:fixed;inset:0;pointer-events:none;z-index:10;
-  padding:calc(12px + var(--sat)) calc(12px + var(--sar)) calc(12px + var(--sab)) calc(12px + var(--sal));
-  font:11px/1.4 var(--fn);letter-spacing:.12em;color:var(--bone-dim)}
-.chip{display:inline-flex;gap:7px;align-items:baseline;padding:5px 10px;border-radius:7px;
-  background:var(--panel);border:1px solid rgba(234,230,218,.12)}
-.chip b{color:var(--bone);font-weight:600}
-#hud .row{display:flex;gap:8px;flex-wrap:wrap}
-#reticle{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;opacity:.55}
+  padding:calc(14px + var(--sat)) calc(14px + var(--sar)) calc(14px + var(--sab)) calc(14px + var(--sal));
+  font:10px/1.5 var(--fn);letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+#hud .row{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;gap:8px;align-items:baseline;padding:6px 11px;border-radius:2px;
+  background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(6px)}
+.chip b{color:var(--bone);font-weight:600;letter-spacing:.1em;font-variant-numeric:tabular-nums}
+#hud .right{position:absolute;right:calc(14px + var(--sar));top:calc(14px + var(--sat));display:flex;gap:6px}
+#reticle{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;opacity:.4}
 #reticle:before,#reticle:after{content:"";position:absolute;background:var(--bone)}
-#reticle:before{left:6px;top:0;width:2px;height:14px}
-#reticle:after{left:0;top:6px;width:14px;height:2px}
-#hint{position:absolute;left:50%;bottom:calc(14px + var(--sab));transform:translateX(-50%);white-space:nowrap;
-  font-size:11px;color:rgba(234,230,218,.55);background:var(--panel);padding:6px 12px;border-radius:999px}
+#reticle:before{left:8px;top:0;width:1px;height:18px}
+#reticle:after{left:0;top:8px;width:18px;height:1px}
+#hint{position:absolute;left:50%;bottom:calc(16px + var(--sab));transform:translateX(-50%);white-space:nowrap;
+  font-size:10px;letter-spacing:.14em;color:rgba(239,233,220,.5);background:var(--panel);
+  padding:7px 14px;border-radius:2px;border:1px solid var(--line)}
+#meter{position:absolute;left:calc(14px + var(--sal));bottom:calc(16px + var(--sab));width:min(240px,42vw)}
+#meter i{display:block;height:2px;background:linear-gradient(90deg,var(--signal),#ff6b35);width:0%;transition:width .2s}
+#meter span{display:block;margin-top:7px;font-size:9px;color:rgba(239,233,220,.4)}
 
-.screen{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:20px;
-  background:radial-gradient(120% 120% at 50% 0%,rgba(8,20,16,.55),rgba(3,8,6,.9))}
-.card{width:min(540px,94vw);border:1px solid var(--line);border-radius:6px;background:rgba(8,16,13,.9);
-  padding:clamp(22px,4vw,40px);box-shadow:0 30px 80px rgba(0,0,0,.65)}
-.eyebrow{font:10px/1 var(--fn);letter-spacing:.32em;color:#6f8a7d}
-.card h1{margin:14px 0 8px;font-size:clamp(34px,7vw,58px);font-weight:800;letter-spacing:.10em;line-height:1.05}
+/* ---- screens: same typographic system as the HUD ---- */
+.screen{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:22px;overflow:auto;
+  background:radial-gradient(120% 100% at 50% 0%,rgba(6,8,11,.42),rgba(4,5,7,.92))}
+.card{width:min(560px,94vw);margin:auto;border:1px solid var(--line);border-radius:2px;background:rgba(8,10,13,.86);
+  padding:clamp(24px,4.4vw,44px);box-shadow:0 40px 120px rgba(0,0,0,.7);backdrop-filter:blur(10px)}
+.eyebrow{font:9px/1 var(--fn);letter-spacing:.42em;text-transform:uppercase;color:#7e858d}
+.card h1{margin:14px 0 10px;font-size:clamp(34px,7vw,60px);font-weight:800;letter-spacing:.15em;
+  line-height:.95;text-transform:uppercase}
 .card h1 em{font-style:normal;color:var(--signal)}
-.card p{margin:0 0 22px;font-size:14px;line-height:1.8;color:#a9b6ad}
-.actions{display:flex;gap:10px;flex-wrap:wrap}
-.btn{min-height:46px;padding:12px 20px;border:1px solid #35473e;border-radius:4px;background:rgba(255,255,255,.03);
-  color:var(--bone);font:600 14px/1 var(--f);letter-spacing:.06em;transition:background .15s,border-color .15s}
-.btn:hover{background:rgba(255,255,255,.08);border-color:#4a6156}
-.btn.primary{background:var(--signal);color:#221a08;border-color:#a8761f;font-weight:700}
-.btn:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
-.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0 0 22px;font:12px/1.7 var(--fn);color:#95a49a}
+.card p{margin:0 0 24px;font-size:14px;line-height:1.85;color:#a5abb2;max-width:44ch}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{min-height:46px;padding:12px 22px;border:1px solid rgba(239,233,220,.22);border-radius:2px;
+  background:rgba(255,255,255,.02);color:var(--bone);font:600 12px/1 var(--f);
+  letter-spacing:.18em;text-transform:uppercase;transition:background .16s,border-color .16s,transform .16s}
+.btn:hover{background:rgba(255,255,255,.07);border-color:rgba(239,233,220,.4)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--signal);color:#241a08;border-color:#c98b2e;font-weight:800}
+.btn:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;margin:0 0 24px;
+  font:10px/1.9 var(--fn);letter-spacing:.1em;text-transform:uppercase;color:#868d94}
 .keys b{color:var(--bone);font-weight:600}
-.note{margin:18px 0 0;font:11px/1.7 var(--fn);color:#6c7d73}
+.note{margin:20px 0 0;font:10px/1.8 var(--fn);color:#6a7076;letter-spacing:.06em}
 
 #boot{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:14px;background:#050b09;transition:opacity .5s}
+  gap:16px;background:#05070a;transition:opacity .6s}
 #boot.done{opacity:0;pointer-events:none}
-.boot-mark{font-size:clamp(28px,6vw,56px);font-weight:800;letter-spacing:.22em;margin-right:-.22em}
-.boot-sub{font:10px/1 var(--fn);letter-spacing:.24em;text-transform:uppercase;color:#5f786c}
-.boot-bar{width:min(300px,70vw);height:2px;background:#15211c}
-.boot-bar i{display:block;height:100%;width:0;background:var(--signal);transition:width .3s}
+.boot-mark{font-size:clamp(26px,5.4vw,48px);font-weight:800;letter-spacing:.34em;margin-right:-.34em}
+.boot-sub{font:9px/1 var(--fn);letter-spacing:.3em;text-transform:uppercase;color:#5c646c}
+.boot-bar{width:min(280px,66vw);height:1px;background:#1a1f25}
+.boot-bar i{display:block;height:100%;width:0;background:var(--signal);transition:width .35s}
 #fatal{position:fixed;left:0;right:0;bottom:0;z-index:70;padding:10px 16px calc(10px + var(--sab));
-  background:#3a1512;color:#ffd9d2;font:12px/1.5 var(--fn);border-top:1px solid #7a2a22}
-#dbg{position:fixed;right:8px;bottom:8px;z-index:50;padding:6px 9px;background:rgba(0,0,0,.75);
+  background:#3a1512;color:#ffd9d2;font:11px/1.5 var(--fn);border-top:1px solid #7a2a22}
+#dbg{position:fixed;right:8px;bottom:8px;z-index:50;padding:6px 9px;background:rgba(0,0,0,.8);
   color:#8fd6b0;font:10px/1.6 var(--fn);white-space:pre;pointer-events:none}
-@media (max-width:560px){ .card h1{font-size:clamp(30px,9vw,44px)} #hint{font-size:10px} }
+
+/* touch stick: only on coarse pointers, only during play */
+#stick{position:fixed;z-index:15;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;
+  border:1px solid rgba(239,233,220,.22);background:rgba(10,12,15,.28);display:none;pointer-events:none}
+#stick.on{display:block}
+#stick i{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;
+  background:rgba(239,233,220,.5)}
+@media (pointer:coarse){ #hint{display:none} }
+@media (max-width:560px){ .card h1{font-size:clamp(30px,10vw,44px)} }
+@media (max-height:760px){
+  .card{padding:clamp(18px,3vw,28px)}
+  .card p{font-size:13px;margin-bottom:16px}
+  .keys{margin-bottom:16px;gap:4px 14px}
+  .note{display:none}
+}
+@media (max-height:520px){
+  .card{padding:16px}
+  .card h1{font-size:clamp(24px,6vh,32px);margin:8px 0 6px}
+  .card p{font-size:12px;line-height:1.6;margin-bottom:12px}
+  .keys{display:none}
+  .eyebrow{display:none}
+  .btn{min-height:40px;padding:10px 16px}
+}
 @media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms!important;animation-duration:.01ms!important} }
 </style>
 </head>
 <body>
-<canvas id="cv" tabindex="0" aria-label="3D scene"></canvas>
+<canvas id="cv" tabindex="0" aria-label="Duskline, a 3D scene"></canvas>
 
 <div id="hud">
   <div class="row">
     <span class="chip">FPS <b id="h-fps">--</b></span>
-    <span class="chip">X <b id="h-x">0.0</b></span>
-    <span class="chip">Z <b id="h-z">0.0</b></span>
-    <span class="chip" id="h-tier">TIER <b>AUTO</b></span>
+    <span class="chip">SIGNAL <b id="h-cores">0/4</b></span>
+    <span class="chip">T <b id="h-time">0.0</b></span>
   </div>
+  <div class="right"><span class="chip" id="h-tier">TIER <b>AUTO</b></span></div>
   <div id="reticle"></div>
-  <div id="hint">WASD move · drag to look · Shift sprint · Esc pause</div>
+  <div id="meter"><i id="h-bar"></i><span id="h-meter-label">signal recovered</span></div>
+  <div id="hint">WASD move · drag to look · shift sprint · esc pause</div>
 </div>
-
-<div id="boot">
-  <div class="boot-mark">STARTER 3D</div>
-  <div class="boot-sub" id="boot-msg">compiling shaders</div>
-  <div class="boot-bar"><i id="boot-fill"></i></div>
-</div>
+<div id="stick"><i></i></div>
 
 <div id="title" class="screen hide">
   <div class="card">
-    <div class="eyebrow">ONE FILE · WEBGL2 · NO LIBRARIES</div>
-    <h1>Courtyard<em>.</em></h1>
-    <p>A procedurally lit test range. Ground, pillars and grade are generated at runtime —
-       nothing is loaded, nothing is downloaded.</p>
+    <div class="eyebrow">Yard 07 · 19:42 · wind NW 4</div>
+    <h1>Dusk<em>line</em></h1>
+    <p>Four signal cores are still burning in the yard. Walk the tide line, take them back
+      before the light goes. Nothing here is loaded from disk — the sky, the steel and the
+      dust are all computed while you watch.</p>
     <div class="keys">
-      <b>W A S D</b><span>move</span>
-      <b>drag / click</b><span>look (pointer lock when allowed)</span>
+      <b>WASD</b><span>move</span>
+      <b>Mouse</b><span>look (drag or click to capture)</span>
       <b>Shift</b><span>sprint</span>
       <b>Esc</b><span>pause</span>
     </div>
     <div class="actions">
-      <button class="btn primary" data-act="start">Enter</button>
+      <button class="btn primary" data-act="start">Enter the yard</button>
+      <button class="btn" data-act="pause">Settings</button>
     </div>
-    <p class="note">Replace the scene builder and the world shader; keep the shell.</p>
+    <p class="note">Single file · zero network · every surface is a shader</p>
   </div>
 </div>
 
 <div id="pause" class="screen hide">
-  <div class="card" role="dialog" aria-modal="true" aria-label="Paused">
-    <div class="eyebrow">PAUSED</div>
-    <h1>Hold<em>.</em></h1>
+  <div class="card">
+    <div class="eyebrow">Held</div>
+    <h1>Paused</h1>
+    <p>The yard keeps its light while you are away. Rendering is paused, audio is
+      suspended, and the run resumes exactly where it stopped.</p>
     <div class="actions">
       <button class="btn primary" data-act="resume">Resume</button>
-      <button class="btn" data-act="quit">Title</button>
+      <button class="btn" data-act="quit">Leave</button>
     </div>
   </div>
 </div>
 
+<div id="over" class="screen hide">
+  <div class="card">
+    <div class="eyebrow" id="over-eyebrow">Run complete</div>
+    <h1 id="over-title">All cores</h1>
+    <p id="over-body">The yard goes dark. Four signals recovered.</p>
+    <div class="actions">
+      <button class="btn primary" data-act="again">Again</button>
+      <button class="btn" data-act="quit">Leave</button>
+    </div>
+  </div>
+</div>
+
+<div id="boot">
+  <div class="boot-mark">DUSKLINE</div>
+  <div class="boot-sub">yard 07 · procedural slice</div>
+  <div class="boot-bar"><i id="boot-fill"></i></div>
+  <div class="boot-sub" id="boot-msg">warming up…</div>
+</div>
 <div id="fatal" class="hide"></div>
 <div id="dbg" hidden></div>
 
 <script>
-(() => {
 'use strict';
+(() => {
+/* =====================================================================
+   A single-file 3D game shell with a cinematic renderer.
+
+   Passes, in order:
+     shadow map  ->  HDR scene (sky, PBR ground, PBR props, emissives)
+                 ->  half-res volumetric sun shafts
+                 ->  half-res SSAO + bilateral blur
+                 ->  bloom pyramid (Karis downsample, tent upsample)
+                 ->  composite: depth-aware upsample, ACES, grade, vignette
+                 ->  FXAA + grain
+
+   No libraries, no textures on disk, no network. Everything below is one
+   file on purpose: the artifact is the deliverable.
+   ===================================================================== */
 
 const $ = s => document.querySelector(s);
 const cv = $('#cv');
@@ -131,167 +196,405 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, t) => a + (b - a) * t;
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const norm = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
 
 /* ------------------------------- errors ------------------------------ */
 const ERRS = [];
-function fatal(e){
-  const msg = (e && (e.message || e.reason && e.reason.message)) || String(e);
-  if (!ERRS.includes(msg)) ERRS.push(msg);
+function fatal(e) {
+  const msg = (e && (e.message || (e.reason && e.reason.message))) || String(e);
+  ERRS.push(msg);
+  console.error(e);
   const el = $('#fatal');
-  if (el) { el.classList.remove('hide'); el.textContent = 'Renderer error: ' + msg; }
+  if (el) { el.classList.remove('hide'); el.textContent = 'Something went wrong: ' + msg; }
   document.body.dataset.error = msg;
 }
-addEventListener('error', ev => fatal((ev.message || 'error') + ' @' + (ev.lineno || 0)));
-addEventListener('unhandledrejection', ev => fatal(ev.reason));
+addEventListener('error', e => fatal(e.error || e.message));
+addEventListener('unhandledrejection', e => fatal(e.reason));
 
 /* ------------------------------- audio ------------------------------- */
 let AC = null, master = null, noiseBuf = null;
-function audioInit(){
+function audioInit() {
   if (AC) return;
   const C = window.AudioContext || window.webkitAudioContext;
   if (!C) return;
-  try { AC = new C(); master = AC.createGain(); master.gain.value = .12; master.connect(AC.destination); }
-  catch { AC = null; }
-  if (AC && AC.state === 'suspended') AC.resume().catch(() => {});
+  try { AC = new C(); } catch { return; }
+  master = AC.createGain();
+  master.gain.value = 0.5;
+  master.connect(AC.destination);
+  if (AC.state === 'suspended') AC.resume().catch(() => {});
+  // a low bed: two detuned sines through a slow filter, the yard's own hum
+  const o1 = AC.createOscillator(), o2 = AC.createOscillator();
+  const g = AC.createGain(), f = AC.createBiquadFilter();
+  o1.type = 'sine'; o2.type = 'sine';
+  o1.frequency.value = 54; o2.frequency.value = 81.4;
+  f.type = 'lowpass'; f.frequency.value = 320;
+  g.gain.value = 0.05;
+  o1.connect(g); o2.connect(g); g.connect(f); f.connect(master);
+  o1.start(); o2.start();
 }
-['pointerdown','keydown','touchstart'].forEach(ev =>
+['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
   addEventListener(ev, audioInit, { once: true, passive: true }));
 
-function tone(f, dur, type, vol, slide){
+function tone(freq, dur, type = 'sine', vol = 0.12, slide = 0) {
   if (!AC) return;
-  try {
-    const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();
-    o.type = type || 'sine';
-    o.frequency.setValueAtTime(f, t);
-    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, slide), t + dur);
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.linearRampToValueAtTime(vol, t + .01);
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .02);
-  } catch {}
+  const t = AC.currentTime + 0.001;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(Math.max(20, freq), t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, slide), t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(Math.max(0.0002, vol), t + 0.014);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + dur + 0.03);
 }
-function step(){
+
+function footstep() {
   if (!AC) return;
-  try {
-    if (!noiseBuf) {
-      noiseBuf = AC.createBuffer(1, AC.sampleRate * .3 | 0, AC.sampleRate);
-      const d = noiseBuf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    }
-    const t = AC.currentTime, s = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
-    s.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 1.2;
-    g.gain.setValueAtTime(.05, t); g.gain.exponentialRampToValueAtTime(.0001, t + .08);
-    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + .1);
-  } catch {}
+  if (!noiseBuf) {
+    noiseBuf = AC.createBuffer(1, Math.floor(AC.sampleRate * 0.4), AC.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+  }
+  const t = AC.currentTime;
+  const s = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
+  s.buffer = noiseBuf;
+  f.type = 'bandpass'; f.frequency.value = 900 + Math.random() * 500; f.Q.value = 0.9;
+  g.gain.setValueAtTime(0.085, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+  s.connect(f); f.connect(g); g.connect(master);
+  s.start(t); s.stop(t + 0.16);
 }
 
 /* ------------------------------- input ------------------------------- */
 const keys = new Set();
 const look = { dx: 0, dy: 0 };
-let drag = null;
+let drag = null, touchStick = null, stickVec = { x: 0, y: 0 };
 
 addEventListener('keydown', e => {
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
   keys.add(e.code);
-  if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
+  if (e.code === 'Escape') { e.preventDefault(); togglePause(); }
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
 });
 addEventListener('keyup', e => keys.delete(e.code));
-addEventListener('blur', () => { keys.clear(); drag = null; });
+addEventListener('blur', () => keys.clear());
 
 cv.addEventListener('pointerdown', e => {
-  drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
-  try {
-    const req = cv.requestPointerLock && cv.requestPointerLock();
-    if (req && req.catch) req.catch(() => {});       // lock may be denied: drag still works
-  } catch {}
+  audioInit();
   cv.focus({ preventScroll: true });
-});
-addEventListener('pointermove', e => {
-  if (document.pointerLockElement === cv) { look.dx += e.movementX; look.dy += e.movementY; return; }
-  if (drag && e.pointerId === drag.id) {
-    look.dx += e.clientX - drag.x;
-    look.dy += e.clientY - drag.y;
-    drag.x = e.clientX; drag.y = e.clientY;
+  if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.45 && !touchStick) {
+    touchStick = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    const s = $('#stick');
+    s.classList.add('on');
+    s.style.left = e.clientX + 'px';
+    s.style.top = e.clientY + 'px';
+    return;
   }
+  drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
 });
-['pointerup','pointercancel'].forEach(ev => addEventListener(ev, e => {
+
+cv.addEventListener('pointermove', e => {
+  if (touchStick && e.pointerId === touchStick.id) {
+    const dx = e.clientX - touchStick.x, dy = e.clientY - touchStick.y;
+    const d = Math.hypot(dx, dy) || 1, r = Math.min(d, 52) / 52;
+    stickVec = { x: (dx / d) * r, y: (dy / d) * r };
+    $('#stick i').style.transform = 'translate(' + ((dx / d) * r * 34).toFixed(1) + 'px,' +
+      ((dy / d) * r * 34).toFixed(1) + 'px)';
+    return;
+  }
+  if (!drag || e.pointerId !== drag.id) return;
+  look.dx += e.clientX - drag.x;
+  look.dy += e.clientY - drag.y;
+  drag.x = e.clientX; drag.y = e.clientY;
+});
+
+function endPointer(e) {
+  if (touchStick && e.pointerId === touchStick.id) {
+    touchStick = null; stickVec = { x: 0, y: 0 };
+    $('#stick').classList.remove('on');
+    $('#stick i').style.transform = '';
+    return;
+  }
   if (drag && e.pointerId === drag.id) drag = null;
-}));
+}
+cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('pointercancel', endPointer);
+cv.addEventListener('contextmenu', e => e.preventDefault());
 
 /* ---------------------------- matrix helpers ------------------------- */
 const mat4 = () => new Float32Array(16);
 
-function perspective(out, fovy, aspect, near, far){
+function perspective(out, fovy, aspect, near, far) {
   const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
   out.fill(0);
-  out[0] = f / aspect; out[5] = f;
-  out[10] = (far + near) * nf; out[11] = -1;
+  out[0] = f / aspect; out[5] = f; out[10] = (far + near) * nf; out[11] = -1;
   out[14] = 2 * far * near * nf;
   return out;
 }
-function mul(out, a, b){
-  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-    let s = 0;
-    for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k];
-    out[i * 4 + j] = s;
-  }
-  return out;
-}
-function view(out, px, py, pz, yaw, pitch){
-  const cp = Math.cos(pitch), sp = Math.sin(pitch);
-  const fx = cp * Math.sin(yaw), fy = sp, fz = cp * Math.cos(yaw);
-  let rx = -fz, ry = 0, rz = fx;
-  const rl = Math.hypot(rx, ry, rz) || 1; rx /= rl; ry /= rl; rz /= rl;
-  const ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx;
-  out[0] = rx; out[1] = ux; out[2] = -fx; out[3] = 0;
-  out[4] = ry; out[5] = uy; out[6] = -fy; out[7] = 0;
-  out[8] = rz; out[9] = uz; out[10] = -fz; out[11] = 0;
-  out[12] = -(rx * px + ry * py + rz * pz);
-  out[13] = -(ux * px + uy * py + uz * pz);
-  out[14] = fx * px + fy * py + fz * pz;
+
+function lookAt(out, ex, ey, ez, cx, cy, cz, ux, uy, uz) {
+  let zx = ex - cx, zy = ey - cy, zz = ez - cz;
+  let l = Math.hypot(zx, zy, zz) || 1; zx /= l; zy /= l; zz /= l;
+  let xx = uy * zz - uz * zy, xy = uz * zx - ux * zz, xz = ux * zy - uy * zx;
+  l = Math.hypot(xx, xy, xz) || 1; xx /= l; xy /= l; xz /= l;
+  const yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
+  out[0] = xx; out[1] = yx; out[2] = zx; out[3] = 0;
+  out[4] = xy; out[5] = yy; out[6] = zy; out[7] = 0;
+  out[8] = xz; out[9] = yz; out[10] = zz; out[11] = 0;
+  out[12] = -(xx * ex + xy * ey + xz * ez);
+  out[13] = -(yx * ex + yy * ey + yz * ez);
+  out[14] = -(zx * ex + zy * ey + zz * ez);
   out[15] = 1;
   return out;
 }
 
-/* ------------------------------- shaders ----------------------------- */
-const VS_OBJ = `#version 300 es
+function ortho(out, l, r, b, t, n, f) {
+  out.fill(0);
+  out[0] = 2 / (r - l); out[5] = 2 / (t - b); out[10] = -2 / (f - n);
+  out[12] = -(r + l) / (r - l); out[13] = -(t + b) / (t - b); out[14] = -(f + n) / (f - n);
+  out[15] = 1;
+  return out;
+}
+
+function mul(out, a, b) {
+  for (let c = 0; c < 4; c++) {
+    const b0 = b[c * 4], b1 = b[c * 4 + 1], b2 = b[c * 4 + 2], b3 = b[c * 4 + 3];
+    out[c * 4 + 0] = a[0] * b0 + a[4] * b1 + a[8] * b2 + a[12] * b3;
+    out[c * 4 + 1] = a[1] * b0 + a[5] * b1 + a[9] * b2 + a[13] * b3;
+    out[c * 4 + 2] = a[2] * b0 + a[6] * b1 + a[10] * b2 + a[14] * b3;
+    out[c * 4 + 3] = a[3] * b0 + a[7] * b1 + a[11] * b2 + a[15] * b3;
+  }
+  return out;
+}
+
+function invert(out, m) {
+  const a00 = m[0], a01 = m[1], a02 = m[2], a03 = m[3];
+  const a10 = m[4], a11 = m[5], a12 = m[6], a13 = m[7];
+  const a20 = m[8], a21 = m[9], a22 = m[10], a23 = m[11];
+  const a30 = m[12], a31 = m[13], a32 = m[14], a33 = m[15];
+  const b00 = a00 * a11 - a01 * a10, b01 = a00 * a12 - a02 * a10;
+  const b02 = a00 * a13 - a03 * a10, b03 = a01 * a12 - a02 * a11;
+  const b04 = a01 * a13 - a03 * a11, b05 = a02 * a13 - a03 * a12;
+  const b06 = a20 * a31 - a21 * a30, b07 = a20 * a32 - a22 * a30;
+  const b08 = a20 * a33 - a23 * a30, b09 = a21 * a32 - a22 * a31;
+  const b10 = a21 * a33 - a23 * a31, b11 = a22 * a33 - a23 * a32;
+  let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+  if (!det) { out.fill(0); return out; }
+  det = 1 / det;
+  out[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det;
+  out[1] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
+  out[2] = (a31 * b05 - a32 * b04 + a33 * b03) * det;
+  out[3] = (a22 * b04 - a21 * b05 - a23 * b03) * det;
+  out[4] = (a12 * b08 - a10 * b11 - a13 * b07) * det;
+  out[5] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
+  out[6] = (a32 * b02 - a30 * b05 - a33 * b01) * det;
+  out[7] = (a20 * b05 - a22 * b02 + a23 * b01) * det;
+  out[8] = (a10 * b10 - a11 * b08 + a13 * b06) * det;
+  out[9] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
+  out[10] = (a30 * b04 - a31 * b02 + a33 * b00) * det;
+  out[11] = (a21 * b02 - a20 * b04 - a23 * b00) * det;
+  out[12] = (a11 * b07 - a10 * b09 - a12 * b06) * det;
+  out[13] = (a00 * b09 - a01 * b07 + a02 * b06) * det;
+  out[14] = (a31 * b01 - a30 * b03 - a32 * b00) * det;
+  out[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
+  return out;
+}
+
+/* ---------------------------- shader source -------------------------- */
+const VSH = `#version 300 es
 precision highp float;
+`;
+const FSH = `#version 300 es
+precision highp float;
+precision highp sampler2DShadow;
+`;
+
+// Shared shading library: noise, sky model, BRDF, shadows, fog.
+// Every program that talks about the world includes this, so the sky you see and
+// the sky reflected in a puddle are the same function.
+const COMMON = `
+uniform vec3 uSunDir, uSunCol, uZen, uHor, uHorAway, uCamPos;
+uniform float uTime, uExposure, uShadowOn;
+uniform sampler2DShadow uShadow;
+uniform mat4 uLightVP;
+
+float hash12(vec2 p){
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+float vnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash12(i), hash12(i + vec2(1, 0)), u.x),
+             mix(hash12(i + vec2(0, 1)), hash12(i + vec2(1, 1)), u.x), u.y);
+}
+float fbm2(vec2 p){
+  float s = 0.0, a = 0.5;
+  for (int i = 0; i < 2; i++){ s += a * vnoise(p); p = p * 2.03 + 11.7; a *= 0.5; }
+  return s;
+}
+float fbm3(vec2 p){
+  float s = 0.0, a = 0.5;
+  for (int i = 0; i < 3; i++){ s += a * vnoise(p); p = p * 2.03 + 11.7; a *= 0.5; }
+  return s;
+}
+float fbm4(vec2 p){
+  float s = 0.0, a = 0.5;
+  for (int i = 0; i < 4; i++){ s += a * vnoise(p); p = p * 2.03 + 11.7; a *= 0.5; }
+  return s;
+}
+float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+float luma(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+
+// --- sky: one analytic model, used for the dome, for reflections and for fog ---
+// A blue dome plus an additive horizon glow. Mixing the two instead is what turns
+// a sunset into beige: the horizon is ten times brighter than the zenith, so even a
+// small mix weight of it wins over the blue and the whole sky greys out.
+vec3 skyColor(vec3 d, float rough, float clouds){
+  float y = clamp(d.y, -0.25, 1.0);
+  float az = dot(normalize(d.xz + 1e-5), normalize(uSunDir.xz)) * 0.5 + 0.5;
+  float side = 0.28 + 0.72 * pow(clamp(az, 0.0, 1.0), 2.2);
+
+  vec3 c = mix(uZen * 0.45, uZen, smoothstep(-0.04, 0.32, y));
+  float glow = exp(-max(y, 0.0) * 13.0);
+  c += uHor * glow * side * 0.62;
+  c += uHorAway * exp(-max(y, 0.0) * 3.0) * (1.0 - side) * 0.22;
+
+  float mu = max(dot(d, uSunDir), 0.0);
+  c += uSunCol * pow(mu, 14.0) * 0.045 * glow;
+  c += uSunCol * pow(mu, 160.0) * 0.75;
+  c += uSunCol * smoothstep(0.99962, 0.99990, mu) * 6.0;
+  c += uSunCol * smoothstep(0.99993, 0.99997, mu) * 26.0;
+
+  if (clouds > 0.5 && d.y > -0.02) {
+    vec2 sp = d.xz / max(d.y + 0.16, 0.05);
+    float a = fbm4(sp * 0.42 + vec2(uTime * 0.005, 0.0));
+    float b = fbm3(sp * 1.5 - vec2(uTime * 0.009, 0.0));
+    float m = smoothstep(0.60, 0.84, a * 0.85 + b * 0.25);
+    // clouds are lit from below by the sun: warm rim, cold body
+    vec3 lit = mix(vec3(0.055, 0.065, 0.10), uHor * 0.85, pow(mu, 3.0) * side);
+    c = mix(c, lit * (0.70 + 0.30 * b), m * smoothstep(0.0, 0.42, d.y) * 0.60);
+  }
+  return mix(c, c * 0.72 + vec3(0.008), rough * 0.55);
+}
+
+// 5-tap disc PCF with a normal offset: cheap, and stable on long shadows
+float sunShadow(vec3 wp, vec3 N){
+  if (uShadowOn < 0.5) return 1.0;
+  vec4 sc = uLightVP * vec4(wp + N * 0.045, 1.0);
+  vec3 p = sc.xyz / sc.w * 0.5 + 0.5;
+  if (p.x < 0.002 || p.x > 0.998 || p.y < 0.002 || p.y > 0.998 || p.z > 1.0) return 1.0;
+  vec2 tx = 1.5 / vec2(textureSize(uShadow, 0));
+  float s = texture(uShadow, vec3(p.xy, p.z - 0.0022));
+  s += texture(uShadow, vec3(p.xy + vec2( tx.x,  tx.y), p.z - 0.0022));
+  s += texture(uShadow, vec3(p.xy + vec2(-tx.x,  tx.y), p.z - 0.0022));
+  s += texture(uShadow, vec3(p.xy + vec2( tx.x, -tx.y), p.z - 0.0022));
+  s += texture(uShadow, vec3(p.xy + vec2(-tx.x, -tx.y), p.z - 0.0022));
+  return s * 0.2;
+}
+
+float D_GGX(float NoH, float a){
+  float a2 = a * a, d = NoH * NoH * (a2 - 1.0) + 1.0;
+  return a2 / (3.14159265 * d * d + 1e-6);
+}
+float V_Smith(float NoV, float NoL, float a){
+  float k = a * 0.5;
+  return 0.25 / ((NoV * (1.0 - k) + k) * (NoL * (1.0 - k) + k) + 1e-6);
+}
+vec3 F_Schlick(float c, vec3 f0){ return f0 + (1.0 - f0) * pow(1.0 - c, 5.0); }
+
+// direct sun, with a wrapped diffuse term so low sun grazes stone instead of clipping
+vec3 sunLight(vec3 N, vec3 V, vec3 alb, float rough, float metal, float ao, vec3 wp){
+  vec3 L = uSunDir;
+  float NoL = dot(N, L);
+  float NoV = max(dot(N, V), 1e-3);
+  float sh = sunShadow(wp, N) * smoothstep(-0.06, 0.10, NoL);
+  if (sh <= 0.0) return vec3(0.0);
+  float wrap = max(NoL + 0.06, 0.0) / 1.06;
+  vec3 H = normalize(L + V);
+  float a = max(rough * rough, 0.0025);
+  vec3 f0 = mix(vec3(0.04), alb, metal);
+  vec3 F = F_Schlick(max(dot(V, H), 0.0), f0);
+  vec3 spec = F * D_GGX(max(dot(N, H), 0.0), a) * V_Smith(NoV, max(NoL, 1e-3), a);
+  vec3 diff = alb * (1.0 - metal) / 3.14159265;
+  return (diff * wrap + spec * max(NoL, 0.0)) * uSunCol * sh;
+}
+
+// ambient: hemisphere irradiance plus a blurred sky reflection
+vec3 skyLight(vec3 N, vec3 V, vec3 alb, float rough, float metal, float ao){
+  vec3 amb = mix(uHor * 0.34, uZen * 0.90, clamp(N.y * 0.5 + 0.5, 0.0, 1.0)) * 0.50;
+  amb += uHor * 0.16 * clamp(1.0 - N.y, 0.0, 1.0);   // warm bounce off the wet ground
+  vec3 R = reflect(-V, N);
+  vec3 env = skyColor(mix(R, vec3(0.0, 1.0, 0.0), rough * 0.85), rough, 0.0);
+  vec3 f0 = mix(vec3(0.045), alb, metal);
+  vec3 F = f0 + (max(vec3(1.0 - rough), f0) - f0) * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+  return (alb * (1.0 - metal) * amb + env * F * 0.85) * ao;
+}
+
+// height fog plus a sun-facing in-scatter term: distance alone never reads as air
+vec3 applyFog(vec3 col, vec3 wp){
+  vec3 v = wp - uCamPos;
+  float d = length(v);
+  float f = 1.0 - exp(-pow(d * 0.0072, 1.80));
+  vec3 fc = skyColor(normalize(vec3(v.x, max(v.y * 0.35, 0.02), v.z)), 0.0, 0.0);
+  float mu = max(dot(normalize(v), uSunDir), 0.0);
+  fc += uSunCol * pow(mu, 5.0) * 0.10;
+  return mix(col, fc * 0.42, clamp(f, 0.0, 0.82));
+}
+`;
+
+const VS_FULL = VSH + `
+out vec2 vUv;
+void main(){
+  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  vUv = p;
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+/* ---- shadow pass ---- */
+const VS_SHADOW = VSH + `
 layout(location=0) in vec3 aPos;
-layout(location=1) in vec3 aNor;
-layout(location=2) in vec4 aInst;   // x, z, scale, seed
-uniform mat4 uVP;
-out vec3 vNor;
-out vec3 vWorld;
+layout(location=2) in vec4 aInst0;   // xyz position, w uniform scale
+layout(location=3) in vec4 aInst1;   // x yaw, y height
+uniform mat4 uLightVP;
+uniform float uInstanced;
 void main(){
-  vec3 p = aPos * aInst.z + vec3(aInst.x, aInst.z * 0.5, aInst.y);
-  vWorld = p;
-  vNor = aNor;
-  gl_Position = uVP * vec4(p, 1.0);
+  vec3 p = aPos;
+  if (uInstanced > 0.5){
+    p = vec3(p.x * aInst0.w, (p.y + 0.5) * aInst1.y, p.z * aInst0.w);
+    float c = cos(aInst1.x), s = sin(aInst1.x);
+    p = vec3(p.x * c + p.z * s, p.y, -p.x * s + p.z * c);
+    p += aInst0.xyz;
+  }
+  gl_Position = uLightVP * vec4(p, 1.0);
+}`;
+const FS_SHADOW = FSH + `
+void main(){}`;
+
+/* ---- sky ---- */
+const VS_SKY = VSH + `
+out vec2 vUv;
+void main(){
+  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  vUv = p;
+  gl_Position = vec4(p * 2.0 - 1.0, 0.9999, 1.0);
+}`;
+const FS_SKY = FSH + COMMON + `
+in vec2 vUv;
+uniform mat4 uInvVP;
+out vec4 oColor;
+void main(){
+  vec4 w = uInvVP * vec4(vUv * 2.0 - 1.0, 1.0, 1.0);
+  vec3 d = normalize(w.xyz / w.w - uCamPos);
+  vec3 c = skyColor(d, 0.0, 1.0);
+  // interleaved-gradient dither: kills banding in a 16-bit sky gradient
+  c += (ign(gl_FragCoord.xy + uTime) - 0.5) * 0.0025;
+  oColor = vec4(c, 1.0);
 }`;
 
-const FS_OBJ = `#version 300 es
-precision highp float;
-in vec3 vNor;
-in vec3 vWorld;
-uniform vec3 uCam;
-uniform vec3 uLightDir;
-uniform vec3 uFog;
-out vec4 outColor;
-void main(){
-  vec3 N = normalize(vNor);
-  vec3 L = normalize(uLightDir);
-  vec3 V = normalize(uCam - vWorld);
-  float ndl = max(dot(N, L), 0.0);
-  vec3 base = mix(vec3(0.10, 0.13, 0.12), vec3(0.16, 0.20, 0.18), step(0.5, fract(vWorld.y * 0.7)));
-  vec3 col = base * (0.16 + 0.84 * ndl);
-  col += vec3(0.30, 0.22, 0.10) * pow(1.0 - max(dot(N, V), 0.0), 4.0) * 0.55;
-  float d = length(uCam - vWorld);
-  col = mix(col, uFog, 1.0 - exp(-d * 0.028));
-  outColor = vec4(col, 1.0);
-}`;
-
-const VS_GROUND = `#version 300 es
-precision highp float;
+/* ---- ground: one quad, procedural asphalt + puddles ---- */
+const VS_GROUND = VSH + `
 layout(location=0) in vec3 aPos;
 uniform mat4 uVP;
 out vec3 vWorld;
@@ -300,372 +603,1273 @@ void main(){
   gl_Position = uVP * vec4(aPos, 1.0);
 }`;
 
-const FS_GROUND = `#version 300 es
-precision highp float;
+const FS_GROUND = FSH + COMMON + `
 in vec3 vWorld;
-uniform vec3 uCam;
-uniform vec3 uFog;
-out vec4 outColor;
+out vec4 oColor;
+uniform float uWetness;
 
-float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-
-float grid(vec2 p, float spacing, float width){
-  vec2 q = abs(fract(p / spacing + 0.5) - 0.5) * spacing;
-  vec2 w = fwidth(p) * width;
-  vec2 l = smoothstep(w, vec2(0.0), q);
-  return max(l.x, l.y);
+// surface height field: barely any relief, just enough to catch a grazing sun
+float gh(vec2 p){
+  return vnoise(p * 2.6) * 0.30 + vnoise(p * 11.0) * 0.10;
 }
 
 void main(){
   vec2 p = vWorld.xz;
-  float n = hash(floor(p * 2.0)) * 0.5 + hash(floor(p * 0.5)) * 0.5;
-  vec3 col = mix(vec3(0.035, 0.048, 0.043), vec3(0.062, 0.075, 0.068), n);
+  vec3 V = normalize(uCamPos - vWorld);
+  float dist = length(uCamPos - vWorld);
+  float near = smoothstep(70.0, 6.0, dist);
 
-  col += vec3(0.10, 0.14, 0.12) * grid(p, 4.0, 1.2) * 0.35;
-  col += vec3(0.16, 0.13, 0.08) * grid(p, 16.0, 2.0) * 0.30;
+  // ---- albedo: asphalt aggregate, repair patches, salt crust at the tide line ----
+  float big = fbm3(p * 0.09);
+  float mid = fbm3(p * 0.7);
+  float grit = vnoise(p * 34.0);
+  float grain = vnoise(p * 120.0);
+  vec3 base = mix(vec3(0.070, 0.072, 0.078), vec3(0.125, 0.119, 0.110), big);
+  base *= 0.88 + 0.22 * mid;
+  base += ((grit - 0.5) * 0.020 + (grain - 0.5) * 0.008) * near;
+  float repair = smoothstep(0.58, 0.64, fbm3(p * 0.22 + 4.3));
+  base = mix(base, base * vec3(1.16, 1.05, 0.90) + 0.010, repair * 0.65);
+  float tide = smoothstep(0.025, 0.0, abs(p.y - (sin(p.x * 0.06) * 2.2 - 5.0) + fbm3(p * 0.4) * 0.7));
+  base = mix(base, vec3(0.17, 0.16, 0.145), tide * 0.30);
 
-  float d = length(uCam - vWorld);
-  col = mix(col, uFog, 1.0 - exp(-d * 0.020));
-  outColor = vec4(col, 1.0);
-}`;
+  // cracks: ridged noise keeps them thin and branched rather than blobby
+  float ridge = 1.0 - abs(fbm3(p * 1.6) * 2.0 - 1.0);
+  float crack = smoothstep(0.972, 0.995, ridge) * smoothstep(0.35, 0.65, fbm3(p * 0.45 + 7.0));
+  base *= 1.0 - crack * 0.55;
+  // a worn lane line: dashes, broken up by wear, half gone under the salt
+  float dash = step(0.42, fract(p.x * 0.22));
+  float lane = smoothstep(0.075, 0.05, abs(p.y - 2.6)) * dash * smoothstep(0.30, 0.62, fbm3(p * 0.8 + 2.0));
+  base = mix(base, vec3(0.30, 0.27, 0.19), lane * 0.55);
 
-const VS_POST = `#version 300 es
-precision highp float;
-out vec2 vUv;
-void main(){
-  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
-  vUv = p;
-  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
-}`;
+  // ---- water: large shallow pools, sharp shorelines, flat surface ----
+  float shore = fbm3(p * 0.13 + 9.1) + 0.05 * mid;
+  float pud = smoothstep(0.47, 0.505, shore) * uWetness;
+  pud = max(pud, tide * 0.5 * uWetness);
 
-const FS_POST = `#version 300 es
-precision highp float;
-in vec2 vUv;
-uniform sampler2D uTex;
-uniform float uTime;
-uniform float uVig;
-out vec4 outColor;
-void main(){
-  vec3 c = texture(uTex, vUv).rgb;
+  float e = 0.11;
+  float h0 = gh(p);
+  vec3 N = normalize(vec3(-(gh(p + vec2(e, 0.0)) - h0) / e, 1.0,
+                          -(gh(p + vec2(0.0, e)) - h0) / e));
+  // distance flattening: micro normals alias into glitter past a few metres
+  N = normalize(mix(N, vec3(0.0, 1.0, 0.0), smoothstep(4.0, 45.0, dist) * 0.92));
+  // water is flat; only wind ripples survive, and they are tiny
+  float rip = sin(p.x * 5.5 + uTime * 1.4) * sin(p.y * 4.8 - uTime * 1.1)
+            + 0.45 * sin(p.x * 13.0 - uTime * 2.0) * sin(p.y * 11.0 + uTime * 1.6);
+  N = normalize(mix(N, vec3(0.0, 1.0, 0.0), pud * 0.9));
+  N = normalize(N + vec3(rip * 0.007, 0.0, rip * 0.006) * pud);
 
-  c *= 1.35;                      // exposure
-  c = c / (1.0 + c);              // filmic shoulder
-  c = pow(max(c, 0.0), vec3(1.0 / 2.2));
+  float rough = mix(0.72 + 0.12 * mid - 0.06 * grit + crack * 0.1, 0.03, pud);
+  vec3 alb = base * mix(1.0, 0.30, pud);
 
-  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  c *= mix(vec3(0.93, 1.0, 1.08), vec3(1.06, 1.0, 0.95), smoothstep(0.02, 0.6, l));
-  c = mix(c, c * c * (3.0 - 2.0 * c), 0.16);
-
-  vec2 d = vUv - 0.5;
-  c *= 1.0 - uVig * smoothstep(0.08, 0.6, dot(d, d));
-
-  float g = fract(sin(dot(gl_FragCoord.xy + uTime * 60.0, vec2(12.9898, 78.233))) * 43758.5453);
-  c += (g - 0.5) / 255.0;
-  outColor = vec4(c, 1.0);
-}`;
-
-/* ------------------------------ gl setup ----------------------------- */
-let gl = null, ok = false;
-let progObj, progGround, progPost;
-let vaoCube, vaoGround, vaoEmpty, instBuf, count = 0;
-let fbo = null, tex = null, depthRb = null;
-let vw = 1, vh = 1;
-const U = { obj: {}, ground: {}, post: {} };   // namespaced: locations are per-program
-
-function compile(vsSrc, fsSrc, name){
-  const p = gl.createProgram();
-  for (const [type, src] of [[gl.VERTEX_SHADER, vsSrc], [gl.FRAGMENT_SHADER, fsSrc]]) {
-    const s = gl.createShader(type);
-    gl.shaderSource(s, src); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
-      throw new Error(name + ': ' + gl.getShaderInfoLog(s));
-    gl.attachShader(p, s);
+  vec3 col = sunLight(N, V, alb, rough, 0.0, 1.0, vWorld);
+  col += skyLight(N, V, alb, rough, 0.0, 1.0);
+  if (pud > 0.01){
+    vec3 R = reflect(-V, N);
+    float fres = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+    col += skyColor(R, 0.04, 0.0) * fres * pud * 0.95;
   }
+
+  col = applyFog(col, vWorld);
+  oColor = vec4(col, 1.0);
+}`;
+
+/* ---- props: instanced boxes with painted steel + rust ---- */
+const VS_PROP = VSH + `
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNor;
+layout(location=2) in vec4 aInst0;
+layout(location=3) in vec4 aInst1;
+layout(location=4) in vec3 aInst2;
+uniform mat4 uVP;
+out vec3 vWorld, vNormal, vTint, vLocal;
+out float vRough, vMetal, vSeed;
+void main(){
+  vec3 p = vec3(aPos.x * aInst0.w, (aPos.y + 0.5) * aInst1.y, aPos.z * aInst0.w);
+  vec3 n = aNor;
+  float c = cos(aInst1.x), s = sin(aInst1.x);
+  p = vec3(p.x * c + p.z * s, p.y, -p.x * s + p.z * c);
+  n = vec3(n.x * c + n.z * s, n.y, -n.x * s + n.z * c);
+  vLocal = p;
+  vWorld = p + aInst0.xyz;
+  vNormal = normalize(n);
+  vTint = aInst2;
+  vRough = aInst1.z;
+  vMetal = aInst1.w;
+  vSeed = aInst1.x * 7.7 + aInst0.x * 0.3;
+  gl_Position = uVP * vec4(vWorld, 1.0);
+}`;
+
+const FS_PROP = FSH + COMMON + `
+in vec3 vWorld, vNormal, vTint, vLocal;
+in float vRough, vMetal, vSeed;
+out vec4 oColor;
+
+// triplanar scalar sample: these boxes have no UVs, and stretching is worse than noise
+float tri(vec3 p, vec3 w, float f, float seed){
+  return vnoise(p.zy * f + seed) * w.x + vnoise(p.xz * f + seed) * w.y + vnoise(p.xy * f + seed) * w.z;
+}
+
+void main(){
+  vec3 N = normalize(vNormal);
+  vec3 V = normalize(uCamPos - vWorld);
+  vec3 w = abs(N); w /= (w.x + w.y + w.z);
+
+  float chip = tri(vWorld, w, 0.55, vSeed);
+  float rustN = tri(vWorld, w, 2.0, vSeed + 13.0);
+  float grime = tri(vWorld, w, 0.22, vSeed + 3.0);
+  float streak = vnoise(vec2((vWorld.x + vWorld.z) * 5.0, vWorld.y * 0.9 + vSeed));
+
+  vec3 alb = vTint;
+  float rough = vRough, metal = vMetal;
+
+  // fabricated steel: welded plate seams in the box's own frame. This single
+  // detail is what separates "coloured cube" from "built object".
+  float sh = abs(fract(vLocal.y * 0.55) - 0.5);
+  float sv = abs(fract(vLocal.x * 0.8 + vLocal.z * 0.8) - 0.5);
+  float seam = 1.0 - smoothstep(0.43, 0.5, max(sh, sv));
+  alb *= 1.0 - seam * 0.55;
+  rough = mix(rough, 0.92, seam * 0.7);
+  float bolt = smoothstep(0.06, 0.0, abs(sh - 0.42)) * smoothstep(0.03, 0.0, abs(sv - 0.42));
+  alb *= 1.0 - bolt * 0.5;
+
+  // paint wear: edges and low areas go to primer, then to oxide
+  float wear = smoothstep(0.74, 0.92, chip * 0.70 + rustN * 0.40 + (1.0 - N.y) * 0.14);
+  alb = mix(alb, alb * 0.55 + vec3(0.055, 0.05, 0.048), wear * 0.75);
+  rough = mix(rough, 0.85, wear * 0.8);
+  float oxide = smoothstep(0.80, 0.96, rustN * 0.8 + wear * 0.5 + streak * 0.22);
+  alb = mix(alb, mix(vec3(0.20, 0.11, 0.055), vec3(0.34, 0.18, 0.10), chip), oxide * 0.7);
+  rough = mix(rough, 0.95, oxide);
+  metal = mix(metal, 0.0, oxide);
+  alb *= 1.0 - smoothstep(0.4, 0.9, grime) * 0.18;
+  alb = mix(alb, alb * 0.82, smoothstep(1.1, 0.0, vWorld.y) * 0.5);
+
+  vec3 col = sunLight(N, V, alb, rough, metal, 1.0, vWorld);
+  col += skyLight(N, V, alb, rough, metal, 1.0) * 1.15;
+
+  // backlight rim: the sun sits behind the skyline, so every edge should carry light
+  float NoV = max(dot(N, V), 0.0);
+  float rim = pow(1.0 - NoV, 3.2);
+  float back = pow(max(dot(-N, uSunDir), 0.0), 1.4);
+  col += (uSunCol * 0.075 + uHor * 0.10) * rim * (0.25 + 1.6 * back);
+
+  // wet sheen on the grazing faces sells the damp air
+  col += skyColor(reflect(-V, N), 0.35, 0.0) * pow(1.0 - NoV, 4.0) * 0.06;
+
+  col = applyFog(col, vWorld);
+  oColor = vec4(col, 1.0);
+}`;
+
+/* ---- signal cores: emissive billboards, HDR values feed the bloom ---- */
+const VS_CORE = VSH + `
+layout(location=0) in vec2 aQuad;
+uniform mat4 uVP;
+uniform vec3 uCenter, uRight, uUp;
+uniform float uSize;
+out vec2 vQ;
+void main(){
+  vQ = aQuad;
+  vec3 wp = uCenter + uRight * aQuad.x * uSize + uUp * aQuad.y * uSize;
+  gl_Position = uVP * vec4(wp, 1.0);
+}`;
+const FS_CORE = FSH + COMMON + `
+in vec2 vQ;
+out vec4 oColor;
+uniform float uTaken;
+void main(){
+  float r = length(vQ);
+  if (r > 1.0) discard;
+  float pulse = 0.82 + 0.18 * sin(uTime * 2.2);
+  float core = smoothstep(0.42, 0.0, r) * 7.0;
+  float halo = pow(max(1.0 - r, 0.0), 2.6) * 2.2;
+  vec3 col = vec3(1.0, 0.62, 0.26) * (core + halo) * pulse;
+  col += vec3(1.0, 0.9, 0.75) * smoothstep(0.16, 0.0, r) * 9.0;
+  col *= (1.0 - uTaken);
+  oColor = vec4(col, 1.0);
+}`;
+
+/* ---- dust motes: additive points that catch the sun ---- */
+const VS_MOTE = VSH + `
+layout(location=0) in vec4 aMote;   // xyz, phase
+uniform mat4 uVP;
+uniform vec3 uCamPos;
+uniform float uTime, uPx;
+out float vAlpha;
+void main(){
+  vec3 p = aMote.xyz;
+  p.x += sin(uTime * 0.25 + aMote.w * 6.28) * 0.9;
+  p.y += sin(uTime * 0.18 + aMote.w * 3.1) * 0.5;
+  p.z += cos(uTime * 0.21 + aMote.w * 4.7) * 0.9;
+  gl_Position = uVP * vec4(p, 1.0);
+  float d = length(p - uCamPos);
+  gl_PointSize = clamp(uPx * 0.62 / max(d, 1.4), 2.0, 8.0);
+  vAlpha = smoothstep(46.0, 5.0, d) * smoothstep(1.2, 3.5, d) * (0.25 + 0.75 * aMote.w);
+}`;
+const FS_MOTE = FSH + COMMON + `
+in float vAlpha;
+out vec4 oColor;
+void main(){
+  vec2 q = gl_PointCoord * 2.0 - 1.0;
+  float r = dot(q, q);
+  if (r > 1.0) discard;
+  float a = (1.0 - r) * vAlpha * 0.13;
+  oColor = vec4(uSunCol * 0.9 * a, a);
+}`;
+
+/* ---- volumetric sun shafts, half resolution ---- */
+const FS_VOL = FSH + COMMON + `
+in vec2 vUv;
+out vec4 oColor;
+uniform sampler2D uDepth;
+uniform mat4 uInvVP;
+uniform float uNear, uFar, uSteps, uSigma;
+
+void main(){
+  float z = texture(uDepth, vUv).r;
+  if (z >= 1.0){ oColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+  vec4 wp4 = uInvVP * vec4(vUv * 2.0 - 1.0, z * 2.0 - 1.0, 1.0);
+  vec3 wp = wp4.xyz / wp4.w;
+  vec3 rd = normalize(wp - uCamPos);
+  float maxD = min(length(wp - uCamPos), 70.0);
+
+  float mu = dot(rd, uSunDir);
+  float g = 0.72;
+  float hg = (1.0 - g * g) / (12.566 * pow(max(1.0 + g * g - 2.0 * g * mu, 1e-3), 1.5));
+  float phase = mix(0.079, hg, 0.85);
+
+  float jitter = ign(gl_FragCoord.xy + uTime * 3.0);
+  vec3 acc = vec3(0.0);
+  float T = 1.0, prev = 0.0;
+  for (int i = 0; i < 24; i++){
+    if (float(i) >= uSteps) break;
+    float f = (float(i) + 1.0) / uSteps;
+    float t1 = maxD * f * (0.45 + 0.55 * f);
+    float ds = t1 - prev;
+    vec3 p = uCamPos + rd * (prev + ds * jitter);
+    // height density: thin air high up, thick at the water line
+    float dens = uSigma * (0.35 + 0.65 * exp(-max(p.y, 0.0) / 7.0));
+    vec4 sc = uLightVP * vec4(p, 1.0);
+    vec3 sp = sc.xyz / sc.w * 0.5 + 0.5;
+    float lit = 1.0;
+    if (uShadowOn > 0.5 && sp.x > 0.0 && sp.x < 1.0 && sp.y > 0.0 && sp.y < 1.0 && sp.z < 1.0)
+      lit = texture(uShadow, vec3(sp.xy, sp.z - 0.002));
+    float Ti = exp(-dens * ds);
+    acc += T * (uSunCol * phase * lit * 1.9 + uHor * 0.10) * (1.0 - Ti);
+    T *= Ti;
+    prev = t1;
+  }
+  oColor = vec4(acc, T);
+}`;
+
+/* ---- SSAO, half resolution ---- */
+const FS_AO = FSH + `
+in vec2 vUv;
+out vec4 oColor;
+uniform sampler2D uDepth;
+uniform mat4 uInvVP, uVP;
+uniform vec3 uCamPos;
+uniform float uNear, uFar, uRadius;
+
+float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+float lin(float d){
+  float z = d * 2.0 - 1.0;
+  return (2.0 * uNear * uFar) / (uFar + uNear - z * (uFar - uNear));
+}
+vec3 worldAt(vec2 uv, float d){
+  vec4 p = uInvVP * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
+  return p.xyz / p.w;
+}
+void main(){
+  float d = texture(uDepth, vUv).r;
+  if (d >= 1.0){ oColor = vec4(1.0); return; }
+  vec3 P = worldAt(vUv, d);
+  vec3 N = normalize(cross(dFdx(P), dFdy(P)));
+  if (dot(N, uCamPos - P) < 0.0) N = -N;
+
+  float rot = ign(gl_FragCoord.xy) * 6.2831;
+  float occ = 0.0;
+  vec3 t = normalize(abs(N.y) < 0.9 ? cross(N, vec3(0.0, 1.0, 0.0)) : cross(N, vec3(1.0, 0.0, 0.0)));
+  vec3 b = cross(N, t);
+  for (int i = 0; i < 12; i++){
+    float a = rot + float(i) * 2.39996;
+    float r = sqrt((float(i) + 0.5) / 12.0);
+    vec3 dir = vec3(cos(a) * r, sin(a) * r, 0.35 + 0.65 * r);
+    vec3 s = normalize(t * dir.x + b * dir.y + N * dir.z);
+    vec3 q = P + s * uRadius;
+    vec4 c = uVP * vec4(q, 1.0);
+    vec2 suv = c.xy / c.w * 0.5 + 0.5;
+    if (suv.x < 0.0 || suv.x > 1.0 || suv.y < 0.0 || suv.y > 1.0) continue;
+    float sceneZ = lin(texture(uDepth, suv).r);
+    float sampleZ = lin(c.z / c.w * 0.5 + 0.5);
+    occ += step(sceneZ + 0.05, sampleZ) * smoothstep(0.0, 1.0, 1.0 - abs(sampleZ - sceneZ) / (uRadius * 4.0));
+  }
+  oColor = vec4(clamp(1.0 - (occ / 12.0) * 0.95, 0.0, 1.0));
+}`;
+
+/* ---- depth-aware blur (AO denoise) ---- */
+const FS_BLUR = FSH + `
+in vec2 vUv;
+out vec4 oColor;
+uniform sampler2D uTex, uDepth;
+uniform vec2 uDir;
+uniform float uNear, uFar;
+float lin(float d){
+  float z = d * 2.0 - 1.0;
+  return (2.0 * uNear * uFar) / (uFar + uNear - z * (uFar - uNear));
+}
+void main(){
+  float zc = lin(texture(uDepth, vUv).r);
+  float acc = 0.0, ws = 0.0;
+  for (int i = -3; i <= 3; i++){
+    vec2 uv = vUv + uDir * float(i);
+    float z = lin(texture(uDepth, uv).r);
+    float w = (1.0 - abs(float(i)) * 0.2) * max(0.0, 1.0 - abs(z - zc) / (zc * 0.08 + 0.05));
+    acc += texture(uTex, uv).r * w;
+    ws += w;
+  }
+  oColor = vec4(ws > 1e-4 ? acc / ws : texture(uTex, vUv).r);
+}`;
+
+/* ---- bloom: 13-tap downsample (Karis on the first) and tent upsample ---- */
+const FS_DOWN = FSH + `
+in vec2 vUv;
+out vec4 oColor;
+uniform sampler2D uTex;
+uniform vec2 uTexel;
+uniform float uFirst, uThresh;
+float kw(vec3 c){ return 1.0 / (1.0 + dot(c, vec3(0.2126, 0.7152, 0.0722)) * 0.12); }
+vec3 s(vec2 o){ return min(max(texture(uTex, vUv + o * uTexel).rgb, vec3(0.0)), vec3(90.0)); }
+void main(){
+  vec3 a = s(vec2(-2, 2)), b = s(vec2(0, 2)), c = s(vec2(2, 2));
+  vec3 d = s(vec2(-2, 0)), e = s(vec2(0, 0)), f = s(vec2(2, 0));
+  vec3 g = s(vec2(-2, -2)), h = s(vec2(0, -2)), i = s(vec2(2, -2));
+  vec3 j = s(vec2(-1, 1)), k = s(vec2(1, 1)), l = s(vec2(-1, -1)), m = s(vec2(1, -1));
+  vec3 col;
+  if (uFirst > 0.5){
+    vec3 g0 = (a + b + d + e) * 0.25, g1 = (b + c + e + f) * 0.25;
+    vec3 g2 = (d + e + g + h) * 0.25, g3 = (e + f + h + i) * 0.25, g4 = (j + k + l + m) * 0.25;
+    float w0 = kw(g0) * 0.125, w1 = kw(g1) * 0.125, w2 = kw(g2) * 0.125, w3 = kw(g3) * 0.125, w4 = kw(g4) * 0.5;
+    col = (g0 * w0 + g1 * w1 + g2 * w2 + g3 * w3 + g4 * w4) / (w0 + w1 + w2 + w3 + w4);
+    col = max(col - uThresh, vec3(0.0));
+  } else {
+    col = e * 0.125 + (a + c + g + i) * 0.03125 + (b + d + f + h) * 0.0625 + (j + k + l + m) * 0.125;
+  }
+  oColor = vec4(col, 1.0);
+}`;
+
+// additive: the target already holds the higher mip, so this only adds
+const FS_UP = FSH + `
+in vec2 vUv;
+out vec4 oColor;
+uniform sampler2D uLow;
+uniform vec2 uTexel;
+void main(){
+  vec2 o = uTexel;
+  vec3 t = texture(uLow, vUv).rgb * 4.0;
+  t += (texture(uLow, vUv + vec2(o.x, 0.0)).rgb + texture(uLow, vUv - vec2(o.x, 0.0)).rgb +
+        texture(uLow, vUv + vec2(0.0, o.y)).rgb + texture(uLow, vUv - vec2(0.0, o.y)).rgb) * 2.0;
+  t += texture(uLow, vUv + o).rgb + texture(uLow, vUv - o).rgb +
+       texture(uLow, vUv + vec2(o.x, -o.y)).rgb + texture(uLow, vUv + vec2(-o.x, o.y)).rgb;
+  oColor = vec4(t / 16.0, 1.0);
+}`;
+
+/* ---- composite: vol, AO, bloom, aberration, ACES, grade, vignette ---- */
+const FS_COMP = FSH + `
+in vec2 vUv;
+out vec4 oColor;
+uniform sampler2D uColor, uVol, uAO, uBloom, uDepth;
+uniform vec2 uHalf;
+uniform float uExposure, uTime, uBloomK, uAoK, uVolK, uVig;
+
+float lin(float d){
+  float z = d * 2.0 - 1.0;
+  return (2.0 * 0.1 * 400.0) / (400.0 + 0.1 - z * (400.0 - 0.1));
+}
+float luma(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+
+void main(){
+  vec2 uv = vUv;
+  vec2 c = uv - 0.5;
+  // radial chromatic aberration, weighted by r^2: corners only, centre untouched
+  vec2 ab = c * dot(c, c) * 0.014;
+  vec3 col;
+  col.r = texture(uColor, uv + ab).r;
+  col.g = texture(uColor, uv).g;
+  col.b = texture(uColor, uv - ab).b;
+
+  // bilinear, depth-weighted reconstruction of the two half-res buffers
+  float zc = lin(texture(uDepth, uv).r);
+  vec2 tx = 1.0 / uHalf;
+  vec2 hp = uv * uHalf - 0.5;
+  vec2 i0 = floor(hp), f = hp - i0;
+  vec4 vol = vec4(0.0);
+  float ao = 0.0, ws = 0.0;
+  for (int k = 0; k < 4; k++){
+    vec2 o = vec2(float(k & 1), float(k >> 1));
+    vec2 suv = (i0 + o + 0.5) * tx;
+    suv = clamp(suv, vec2(0.0), vec2(1.0));
+    float z = lin(texture(uDepth, suv).r);
+    float w = (o.x > 0.5 ? f.x : 1.0 - f.x) * (o.y > 0.5 ? f.y : 1.0 - f.y);
+    w *= 1.0 / (0.02 + abs(z - zc) / max(zc, 0.1));
+    w = max(w, 1e-5);
+    vol += texture(uVol, suv) * w;
+    ao += texture(uAO, suv).r * w;
+    ws += w;
+  }
+  vol /= ws; ao /= ws;
+
+  col = col * vol.a + vol.rgb * uVolK;
+  col *= mix(1.0, ao, uAoK);
+  col += texture(uBloom, uv).rgb * uBloomK;
+
+  // exposure with a slow eye adaptation toward the frame's own key
+  col *= uExposure * mix(1.0, clamp(0.26 / max(luma(col), 0.02), 0.7, 1.5), 0.22);
+
+  col = max(col, vec3(0.0));
+  col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
+  col = clamp(col, 0.0, 1.0);
+
+  // linear -> sRGB transfer. Skipping this is the classic "why is my render black"
+  // of hand-written pipelines: the canvas does not encode for you.
+  col = mix(col * 12.92, 1.055 * pow(col, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, col));
+
+  // grade: cool shadows, warm highlights, a touch of contrast and saturation
+  float l = luma(col);
+  col = mix(col, vec3(l), -0.07);
+  col *= vec3(1.05, 1.0, 0.95);
+  col += vec3(-0.006, 0.002, 0.011) * (1.0 - l);
+  col = pow(col, vec3(0.98, 1.0, 1.03));
+  col = clamp((col - 0.5) * 1.12 + 0.5, 0.0, 1.0);
+
+  float v = 1.0 - uVig * pow(clamp(length(c) * 1.42, 0.0, 1.0), 2.4);
+  col *= v;
+
+  oColor = vec4(col, 1.0);
+}`;
+
+/* ---- final: FXAA-style edge blur + film grain ---- */
+const FS_FINAL = FSH + `
+in vec2 vUv;
+out vec4 oColor;
+uniform sampler2D uTex;
+uniform vec2 uRes;
+uniform float uTime, uGrain;
+float luma(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+void main(){
+  vec2 tx = 1.0 / uRes;
+  vec3 m = texture(uTex, vUv).rgb;
+  float lM = luma(m);
+  float lN = luma(texture(uTex, vUv + vec2(0.0, tx.y)).rgb);
+  float lS = luma(texture(uTex, vUv - vec2(0.0, tx.y)).rgb);
+  float lE = luma(texture(uTex, vUv + vec2(tx.x, 0.0)).rgb);
+  float lW = luma(texture(uTex, vUv - vec2(tx.x, 0.0)).rgb);
+  float lNE = luma(texture(uTex, vUv + tx).rgb);
+  float lNW = luma(texture(uTex, vUv + vec2(-tx.x, tx.y)).rgb);
+  float lSE = luma(texture(uTex, vUv + vec2(tx.x, -tx.y)).rgb);
+  float lSW = luma(texture(uTex, vUv - tx).rgb);
+
+  vec3 col = m;
+  float gx = (lNE + 2.0 * lE + lSE) - (lNW + 2.0 * lW + lSW);
+  float gy = (lSW + 2.0 * lS + lSE) - (lNW + 2.0 * lN + lNE);
+  if (abs(gx) + abs(gy) > 0.09){
+    vec2 dir = normalize(vec2(gx, gy) + 1e-5) * tx * 1.15;
+    col = (texture(uTex, vUv - dir).rgb + texture(uTex, vUv + dir).rgb + m * 2.0) * 0.25;
+  }
+  // grain: strongest in the midtones, absent in blacks and highlights
+  float n = h(gl_FragCoord.xy + fract(uTime) * 431.0) - 0.5;
+  col += n * uGrain * (0.35 + 0.65 * (1.0 - abs(luma(col) - 0.5) * 2.0));
+  col += (h(gl_FragCoord.xy * 1.7) - 0.5) / 255.0;
+  oColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}`;
+
+/* ------------------------------- gl setup ---------------------------- */
+let gl = null, ok = false;
+const HDR = { on: false };
+const Q = { scale: 1, tier: 2, shadow: 2048, vol: 20, bloom: 5, ao: true };
+
+const progs = {}, U = {};
+const FBO = { hdr: null, vol: null, aoA: null, aoB: null, bloom: [], ldr: null, shadow: null };
+let vw = 1, vh = 1, DPR = 1, W = 1, H = 1;
+let vaoGround, vaoQuad, vaoMote, vaoFS, instCount = 0, cubeVerts = 0, moteCount = 240;
+const cube = { vao: null };
+
+function compile(vs, fs, name) {
+  const p = gl.createProgram();
+  const mk = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(s);
+      const lines = src.split('\n').map((l, i) => (i + 1) + ': ' + l).join('\n');
+      throw new Error(name + ' / ' + (type === gl.VERTEX_SHADER ? 'vs' : 'fs') + ': ' + log +
+        '\n' + lines.slice(0, 3000));
+    }
+    return s;
+  };
+  gl.attachShader(p, mk(gl.VERTEX_SHADER, vs));
+  gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
   gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS))
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
     throw new Error(name + ' link: ' + gl.getProgramInfoLog(p));
+  }
   return p;
 }
 
-function cubeBuffer(){
-  const P = [], N = [];
-  const F = [
-    { n:[0,0,1],  v:[[-.5,-.5,.5],[.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5]] },
-    { n:[0,0,-1], v:[[.5,-.5,-.5],[-.5,-.5,-.5],[-.5,.5,-.5],[.5,.5,-.5]] },
-    { n:[1,0,0],  v:[[.5,-.5,.5],[.5,-.5,-.5],[.5,.5,-.5],[.5,.5,.5]] },
-    { n:[-1,0,0], v:[[-.5,-.5,-.5],[-.5,-.5,.5],[-.5,.5,.5],[-.5,.5,-.5]] },
-    { n:[0,1,0],  v:[[-.5,.5,.5],[.5,.5,.5],[.5,.5,-.5],[-.5,.5,-.5]] },
-    { n:[0,-1,0], v:[[-.5,-.5,-.5],[.5,-.5,-.5],[.5,-.5,.5],[-.5,-.5,.5]] },
-  ];
-  for (const f of F) {
-    const [a, b, c, d] = f.v;
-    for (const t of [[a,b,c],[a,c,d]]) for (const v of t) { P.push(v[0], v[1], v[2]); N.push(f.n[0], f.n[1], f.n[2]); }
-  }
-  return { pos: new Float32Array(P), nor: new Float32Array(N) };
+function uni(p, names) {
+  const o = {};
+  for (const n of names) o[n] = gl.getUniformLocation(p, n);
+  return o;
 }
 
-function buildWorld(){
-  // seed 2026 for reproducible layout
-  let s = 2026;
+const U_COMMON = ['uSunDir', 'uSunCol', 'uZen', 'uHor', 'uHorAway', 'uCamPos', 'uTime',
+  'uExposure', 'uShadowOn', 'uShadow', 'uLightVP'];
+
+function texFormat(internal) {
+  if (internal === gl.R8) return { format: gl.RED, type: gl.UNSIGNED_BYTE };
+  if (internal === gl.DEPTH_COMPONENT24) return { format: gl.DEPTH_COMPONENT, type: gl.UNSIGNED_INT };
+  return HDR.on ? { format: gl.RGBA, type: gl.HALF_FLOAT } : { format: gl.RGBA, type: gl.UNSIGNED_BYTE };
+}
+
+function makeTex(w, h, internal, filter) {
+  const f = texFormat(internal);
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, internal, w, h, 0, f.format, f.type, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return t;
+}
+
+function makeFBO(w, h, opts) {
+  opts = opts || {};
+  const internal = opts.internal || (HDR.on ? gl.RGBA16F : gl.RGBA8);
+  const color = makeTex(w, h, internal, opts.filter || gl.LINEAR);
+  const depth = opts.depth ? makeTex(w, h, gl.DEPTH_COMPONENT24, gl.NEAREST) : null;
+  const f = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, color, 0);
+  if (depth) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depth, 0);
+  const st = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  if (st !== gl.FRAMEBUFFER_COMPLETE) throw new Error('incomplete framebuffer ' + w + 'x' + h + ' (0x' + st.toString(16) + ')');
+  return { fbo: f, color: color, depth: depth, w: w, h: h };
+}
+
+function dropTargets() {
+  for (const k of ['hdr', 'vol', 'aoA', 'aoB', 'ldr', 'shadow']) {
+    const t = FBO[k];
+    if (!t) continue;
+    gl.deleteFramebuffer(t.fbo);
+    gl.deleteTexture(t.color);
+    if (t.depth) gl.deleteTexture(t.depth);
+    FBO[k] = null;
+  }
+  for (const b of FBO.bloom) { gl.deleteFramebuffer(b.fbo); gl.deleteTexture(b.color); }
+  FBO.bloom = [];
+}
+
+function makeTargets() {
+  dropTargets();
+  const hw = Math.max(2, vw >> 1), hh = Math.max(2, vh >> 1);
+  FBO.hdr = makeFBO(vw, vh, { depth: true });
+  FBO.vol = makeFBO(hw, hh, {});
+  FBO.aoA = makeFBO(hw, hh, { internal: gl.R8 });
+  FBO.aoB = makeFBO(hw, hh, { internal: gl.R8 });
+  FBO.ldr = makeFBO(vw, vh, { internal: gl.RGBA8 });
+  let bw = hw, bh = hh;
+  for (let i = 0; i < Q.bloom; i++) {
+    bw = Math.max(2, bw >> 1); bh = Math.max(2, bh >> 1);
+    FBO.bloom.push(makeFBO(bw, bh, {}));
+  }
+
+  const sm = makeTex(Q.shadow, Q.shadow, gl.DEPTH_COMPONENT24, gl.LINEAR);
+  gl.bindTexture(gl.TEXTURE_2D, sm);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  const sf = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, sf);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, sm, 0);
+  gl.drawBuffers([gl.NONE]);
+  gl.readBuffer(gl.NONE);
+  const st = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  if (st !== gl.FRAMEBUFFER_COMPLETE) throw new Error('shadow framebuffer incomplete');
+  FBO.shadow = { fbo: sf, color: sm, w: Q.shadow, h: Q.shadow };
+}
+
+function cubeGeometry() {
+  const P = [], N = [];
+  const faces = [
+    { n: [0, 0, 1], v: [[-.5, 0, .5], [.5, 0, .5], [.5, 1, .5], [-.5, 1, .5]] },
+    { n: [0, 0, -1], v: [[.5, 0, -.5], [-.5, 0, -.5], [-.5, 1, -.5], [.5, 1, -.5]] },
+    { n: [1, 0, 0], v: [[.5, 0, .5], [.5, 0, -.5], [.5, 1, -.5], [.5, 1, .5]] },
+    { n: [-1, 0, 0], v: [[-.5, 0, -.5], [-.5, 0, .5], [-.5, 1, .5], [-.5, 1, -.5]] },
+    { n: [0, 1, 0], v: [[-.5, 1, .5], [.5, 1, .5], [.5, 1, -.5], [-.5, 1, -.5]] },
+  ];
+  for (const f of faces) {
+    const v = f.v;
+    for (const p of [v[0], v[1], v[2], v[0], v[2], v[3]]) { P.push(p[0], p[1], p[2]); N.push(f.n[0], f.n[1], f.n[2]); }
+  }
+  return { P: P, N: N, count: P.length / 3 };
+}
+
+const world = { cores: [], colliders: [] };
+const smoothstep01 = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+
+function buildWorld() {
+  let s = 20261112;
   const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 
-  const inst = [];
-  for (let x = -6; x <= 6; x++) for (let z = -6; z <= 6; z++) {
-    if (Math.abs(x) < 2 && Math.abs(z) < 2) continue;          // keep the spawn clear
-    const px = x * 7 + (rnd() - .5) * 1.6;
-    const pz = z * 7 + (rnd() - .5) * 1.6;
-    const h = 1.2 + rnd() * (Math.hypot(x, z) > 4 ? 6.5 : 2.4);
-    inst.push(px, pz, h, rnd());
+  const data = [];
+  const push = (x, y, z, sc, yaw, hgt, rough, metal, c) =>
+    data.push(x, y, z, sc, yaw, hgt, rough, metal, c[0], c[1], c[2]);
+
+  const palette = [
+    [0.235, 0.245, 0.250], [0.285, 0.250, 0.200], [0.225, 0.240, 0.220],
+    [0.300, 0.290, 0.265], [0.180, 0.200, 0.225], [0.310, 0.265, 0.210],
+  ];
+  const pick = () => palette[(rnd() * palette.length) | 0];
+
+  // monoliths: a skyline, not a fence — taller and thinner toward the outside
+  const sunAz = Math.atan2(SUN.dir[0], SUN.dir[2]);
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2 + rnd() * 0.12;
+    const rad = 17 + rnd() * 16;
+    const x = Math.cos(a) * rad, z = Math.sin(a) * rad;
+    const sc = 1.5 + rnd() * 3.2;
+    let hgt = 3.5 + rnd() * 12 * (rad / 33);
+    // art direction: the skyline opens toward the sunset so the sun is the subject
+    let dAz = Math.abs(((a - sunAz + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+    hgt *= 0.18 + 0.82 * smoothstep01(dAz / 0.75);
+    const c = pick();
+    push(x, 0, z, sc, rnd() * 0.5 - 0.25, hgt, 0.42 + rnd() * 0.3, 0.55, c);
+    world.colliders.push({ x: x, z: z, r: sc * 0.62 });
   }
-  count = inst.length / 4;
+  // crate clusters along the walking line
+  for (let i = 0; i < 26; i++) {
+    const a = rnd() * Math.PI * 2, rad = 5 + rnd() * 14;
+    const x = Math.cos(a) * rad, z = Math.sin(a) * rad;
+    const sc = 0.55 + rnd() * 0.7;
+    const c = pick();
+    push(x, 0, z, sc, rnd() * 3.14, sc * (0.8 + rnd() * 1.2), 0.55 + rnd() * 0.25, 0.15, c);
+    world.colliders.push({ x: x, z: z, r: sc * 0.7 });
+    if (rnd() > 0.6) {
+      push(x + sc * 0.9, 0, z + sc * 0.3, sc * 0.6, rnd() * 3.14, sc * 0.6, 0.7, 0.1,
+        [c[0] * 0.8, c[1] * 0.8, c[2] * 0.8]);
+    }
+  }
+  // a low seawall on an arc: the strongest shadow catcher on the site
+  for (let i = 0; i < 9; i++) {
+    const a = -0.55 + i * 0.16;
+    push(Math.cos(a) * 22, 0, Math.sin(a) * 22, 3.4, -a, 1.1, 0.72, 0.05, [0.17, 0.16, 0.15]);
+  }
 
-  const cube = cubeBuffer();
-  vaoCube = gl.createVertexArray();
-  gl.bindVertexArray(vaoCube);
-
-  const vboP = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, vboP);
-  gl.bufferData(gl.ARRAY_BUFFER, cube.pos, gl.STATIC_DRAW);
+  const geo = cubeGeometry();
+  cubeVerts = geo.count;
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const vp = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vp);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geo.P), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
-
-  const vboN = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, vboN);
-  gl.bufferData(gl.ARRAY_BUFFER, cube.nor, gl.STATIC_DRAW);
+  const vn = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vn);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geo.N), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(1);
   gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
 
-  instBuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(inst), gl.STATIC_DRAW);
+  const ib = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, ib);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+  const stride = 44;
   gl.enableVertexAttribArray(2);
-  gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 0, 0);
+  gl.vertexAttribPointer(2, 4, gl.FLOAT, false, stride, 0);
   gl.vertexAttribDivisor(2, 1);
+  gl.enableVertexAttribArray(3);
+  gl.vertexAttribPointer(3, 4, gl.FLOAT, false, stride, 16);
+  gl.vertexAttribDivisor(3, 1);
+  gl.enableVertexAttribArray(4);
+  gl.vertexAttribPointer(4, 3, gl.FLOAT, false, stride, 32);
+  gl.vertexAttribDivisor(4, 1);
+  gl.bindVertexArray(null);
+  cube.vao = vao;
+  instCount = data.length / 11;
 
-  // ground: 400 x 400 quad at y = 0
-  const G = new Float32Array([
-    -200, 0, -200,  200, 0, -200,  200, 0, 200,
-    -200, 0, -200,  200, 0,  200, -200, 0, 200,
-  ]);
+  // ground: two triangles, 260 m across; fog hides the edge
+  const R = 260;
   vaoGround = gl.createVertexArray();
   gl.bindVertexArray(vaoGround);
-  const vboG = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, vboG);
-  gl.bufferData(gl.ARRAY_BUFFER, G, gl.STATIC_DRAW);
+  const gb = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, gb);
+  gl.bufferData(gl.ARRAY_BUFFER,
+    new Float32Array([-R, 0, -R, R, 0, -R, R, 0, R, -R, 0, -R, R, 0, R, -R, 0, R]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
-
-  vaoEmpty = gl.createVertexArray();          // required for the attribute-less post pass
   gl.bindVertexArray(null);
+
+  // core billboard quad
+  vaoQuad = gl.createVertexArray();
+  gl.bindVertexArray(vaoQuad);
+  const qb = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, qb);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
+
+  // motes
+  const md = new Float32Array(moteCount * 4);
+  for (let i = 0; i < moteCount; i++) {
+    const a = rnd() * Math.PI * 2, r = 2 + rnd() * 26;
+    md[i * 4] = Math.cos(a) * r;
+    md[i * 4 + 1] = 0.4 + rnd() * 9;
+    md[i * 4 + 2] = Math.sin(a) * r;
+    md[i * 4 + 3] = rnd();
+  }
+  vaoMote = gl.createVertexArray();
+  gl.bindVertexArray(vaoMote);
+  const mb = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, mb);
+  gl.bufferData(gl.ARRAY_BUFFER, md, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
+
+  vaoFS = gl.createVertexArray();
+
+  const spots = [[-6.5, 4.5], [6.5, -1.5], [-10, -7], [10, 7.5]];
+  world.cores = spots.map((p, i) => ({ x: p[0], z: p[1], y: 1.55, taken: 0, seed: i * 1.7 }));
 }
 
-function makeTarget(w, h){
-  if (tex) gl.deleteTexture(tex);
-  if (depthRb) gl.deleteRenderbuffer(depthRb);
-  if (fbo) gl.deleteFramebuffer(fbo);
-
-  tex = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-  depthRb = gl.createRenderbuffer();
-  gl.bindRenderbuffer(gl.RENDERBUFFER, depthRb);
-  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
-
-  fbo = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthRb);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-}
-
-function initGL(){
-  gl = cv.getContext('webgl2', { antialias: false, alpha: false, depth: true, powerPreference: 'high-performance' });
+function initGL() {
+  gl = cv.getContext('webgl2', { antialias: false, alpha: false, depth: false, powerPreference: 'high-performance' });
   if (!gl) throw new Error('WebGL2 is not available in this browser');
 
-  progObj    = compile(VS_OBJ, FS_OBJ, 'object');
-  progGround = compile(VS_GROUND, FS_GROUND, 'ground');
-  progPost   = compile(VS_POST, FS_POST, 'post');
+  HDR.on = !!gl.getExtension('EXT_color_buffer_float');
 
-  for (const n of ['uVP','uCam','uLightDir','uFog']) U.obj[n] = gl.getUniformLocation(progObj, n);
-  for (const n of ['uVP','uCam','uFog'])            U.ground[n] = gl.getUniformLocation(progGround, n);
-  for (const n of ['uTex','uTime','uVig'])          U.post[n] = gl.getUniformLocation(progPost, n);
+  progs.shadow = compile(VS_SHADOW, FS_SHADOW, 'shadow');
+  progs.sky = compile(VS_SKY, FS_SKY, 'sky');
+  progs.ground = compile(VS_GROUND, FS_GROUND, 'ground');
+  progs.prop = compile(VS_PROP, FS_PROP, 'prop');
+  progs.core = compile(VS_CORE, FS_CORE, 'core');
+  progs.mote = compile(VS_MOTE, FS_MOTE, 'mote');
+  progs.vol = compile(VS_FULL, FS_VOL, 'volumetric');
+  progs.ao = compile(VS_FULL, FS_AO, 'ssao');
+  progs.blur = compile(VS_FULL, FS_BLUR, 'blur');
+  progs.down = compile(VS_FULL, FS_DOWN, 'bloom-down');
+  progs.up = compile(VS_FULL, FS_UP, 'bloom-up');
+  progs.comp = compile(VS_FULL, FS_COMP, 'composite');
+  progs.final = compile(VS_FULL, FS_FINAL, 'final');
+
+  const withCommon = (p, extra) => uni(p, U_COMMON.concat(extra));
+  U.shadow = withCommon(progs.shadow, ['uInstanced']);
+  U.sky = withCommon(progs.sky, ['uInvVP']);
+  U.ground = withCommon(progs.ground, ['uVP', 'uWetness']);
+  U.prop = withCommon(progs.prop, ['uVP']);
+  U.core = withCommon(progs.core, ['uVP', 'uCenter', 'uRight', 'uUp', 'uSize', 'uTaken']);
+  U.mote = withCommon(progs.mote, ['uVP', 'uPx']);
+  U.vol = withCommon(progs.vol, ['uDepth', 'uInvVP', 'uNear', 'uFar', 'uSteps', 'uSigma']);
+  U.ao = uni(progs.ao, ['uDepth', 'uInvVP', 'uVP', 'uCamPos', 'uNear', 'uFar', 'uRadius']);
+  U.blur = uni(progs.blur, ['uTex', 'uDepth', 'uDir', 'uNear', 'uFar']);
+  U.down = uni(progs.down, ['uTex', 'uTexel', 'uFirst', 'uThresh']);
+  U.up = uni(progs.up, ['uLow', 'uTexel']);
+  U.comp = uni(progs.comp, ['uColor', 'uVol', 'uAO', 'uBloom', 'uDepth', 'uHalf',
+    'uExposure', 'uTime', 'uBloomK', 'uAoK', 'uVolK', 'uVig']);
+  U.final = uni(progs.final, ['uTex', 'uRes', 'uTime', 'uGrain']);
 
   buildWorld();
+  initTargets();
   gl.enable(gl.DEPTH_TEST);
-  gl.disable(gl.CULL_FACE);        // 36 verts: culling is not worth a winding mistake
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+  gl.clearColor(0.02, 0.02, 0.03, 1);
   ok = true;
 }
 
-/* ------------------------------- camera ------------------------------ */
-const cam = { x: 0, y: 1.7, z: 10, yaw: Math.PI, pitch: -0.04, speed: 6.2 };
-let bob = 0, moving = false, stepTimer = 0;
-const FOG = [0.035, 0.052, 0.048];
+function initTargets() {
+  try {
+    makeTargets();
+  } catch (e) {
+    // float render targets can fail on older drivers: drop to LDR and carry on
+    if (HDR.on) { HDR.on = false; makeTargets(); }
+    else throw e;
+  }
+}
 
-function updateCamera(dt){
-  const sens = 0.0024;
+/* ------------------------------- camera ------------------------------ */
+const cam = { x: 0, y: 1.68, z: 13, yaw: Math.PI, pitch: -0.03, shake: 0, fov: 62 };
+let bob = 0, stepTimer = 0;
+
+const SUN = { dir: norm([0.58, 0.215, -0.78]), col: [4.8, 2.30, 1.02] };
+const SKY = { zen: [0.038, 0.080, 0.185], hor: [0.98, 0.42, 0.125], away: [0.085, 0.100, 0.140] };
+
+function updateCamera(dt) {
+  const sens = 0.0022;
   cam.yaw -= look.dx * sens;
-  cam.pitch = clamp(cam.pitch - look.dy * sens, -1.35, 1.0);
+  cam.pitch = clamp(cam.pitch - look.dy * sens, -1.25, 0.95);
   look.dx = look.dy = 0;
 
-  let mx = 0, mz = 0;
-  if (keys.has('KeyW') || keys.has('ArrowUp'))    mz += 1;
-  if (keys.has('KeyS') || keys.has('ArrowDown'))  mz -= 1;
-  if (keys.has('KeyA') || keys.has('ArrowLeft'))  mx -= 1;
+  let mx = stickVec.x, mz = -stickVec.y;
+  if (keys.has('KeyW') || keys.has('ArrowUp')) mz += 1;
+  if (keys.has('KeyS') || keys.has('ArrowDown')) mz -= 1;
+  if (keys.has('KeyA') || keys.has('ArrowLeft')) mx -= 1;
   if (keys.has('KeyD') || keys.has('ArrowRight')) mx += 1;
-  moving = !!(mx || mz);
+  const moving = Math.abs(mx) + Math.abs(mz) > 0.05;
 
   if (moving) {
-    const m = Math.hypot(mx, mz); mx /= m; mz /= m;
-    const sp = cam.speed * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 1.85 : 1);
+    const m = Math.hypot(mx, mz) || 1; mx /= m; mz /= m;
+    const sprint = keys.has('ShiftLeft') || keys.has('ShiftRight');
+    const sp = 3.5 * (sprint ? 2.1 : 1);
     const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);
     cam.x += (fx * mz + fz * mx) * sp * dt;
     cam.z += (fz * mz - fx * mx) * sp * dt;
-    cam.x = clamp(cam.x, -70, 70);
-    cam.z = clamp(cam.z, -70, 70);
-    bob += dt * (sp * 1.9);
+    bob += dt * sp * 3.4;
     stepTimer += dt;
-    if (stepTimer > (sp > 8 ? .28 : .42)) { stepTimer = 0; step(); }
+    if (stepTimer > (sprint ? 0.3 : 0.48)) { stepTimer = 0; if (!REDUCE) footstep(); }
   } else {
-    bob = lerp(bob, 0, 1 - Math.pow(.001, dt));
+    bob = lerp(bob, 0, 1 - Math.pow(0.001, dt));
   }
-  cam.y = 1.7 + (REDUCE ? 0 : Math.sin(bob) * 0.045);
+
+  for (const c of world.colliders) {
+    const dx = cam.x - c.x, dz = cam.z - c.z;
+    const d = Math.hypot(dx, dz), min = c.r + 0.42;
+    if (d < min && d > 1e-4) { cam.x = c.x + dx / d * min; cam.z = c.z + dz / d * min; }
+  }
+  cam.x = clamp(cam.x, -40, 40);
+  cam.z = clamp(cam.z, -40, 40);
+
+  cam.y = 1.68 + (REDUCE ? 0 : Math.sin(bob) * 0.038) + cam.shake * 0.05;
+  cam.shake = Math.max(0, cam.shake - dt * 2.4);
 }
 
 /* ------------------------------- render ------------------------------ */
-const proj = mat4(), vmat = mat4(), vp = mat4();
-let W = 1, H = 1, DPR = 1, quality = 1;
+const proj = mat4(), viewM = mat4(), vp = mat4(), invVP = mat4();
+const lightView = mat4(), lightProj = mat4(), lightVP = mat4();
+let time = 0;
 
-function resize(){
-  DPR = Math.min(window.devicePixelRatio || 1, 2) * quality;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 1.75) * Q.scale;
   W = cv.clientWidth || innerWidth;
   H = cv.clientHeight || innerHeight;
-  cv.width = Math.max(1, Math.round(W * DPR));
-  cv.height = Math.max(1, Math.round(H * DPR));
-  if (!gl) return;
+  cv.width = Math.max(2, Math.round(W * DPR));
+  cv.height = Math.max(2, Math.round(H * DPR));
+  if (!gl || !ok) return;
   vw = cv.width; vh = cv.height;
-  makeTarget(vw, vh);
+  initTargets();
 }
 
-function draw(){
-  perspective(proj, 62 * Math.PI / 180, vw / vh, 0.1, 400);
-  view(vmat, cam.x, cam.y, cam.z, cam.yaw, cam.pitch);
-  mul(vp, proj, vmat);
+function setCommon(u) {
+  gl.uniform3fv(u.uSunDir, SUN.dir);
+  gl.uniform3fv(u.uSunCol, SUN.col);
+  gl.uniform3fv(u.uZen, SKY.zen);
+  gl.uniform3fv(u.uHor, SKY.hor);
+  gl.uniform3fv(u.uHorAway, SKY.away);
+  gl.uniform3f(u.uCamPos, cam.x, cam.y, cam.z);
+  gl.uniform1f(u.uTime, time);
+  gl.uniform1f(u.uExposure, 1.0);
+  gl.uniform1f(u.uShadowOn, 1);
+  gl.uniform1i(u.uShadow, 3);
+  gl.uniformMatrix4fv(u.uLightVP, false, lightVP);
+}
 
-  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-  gl.viewport(0, 0, vw, vh);
-  gl.clearColor(FOG[0], FOG[1], FOG[2], 1);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+function drawShadow() {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, FBO.shadow.fbo);
+  gl.viewport(0, 0, Q.shadow, Q.shadow);
+  gl.depthMask(true);
+  gl.enable(gl.DEPTH_TEST);
+  gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(progs.shadow);
+  gl.uniformMatrix4fv(U.shadow.uLightVP, false, lightVP);
+  gl.disable(gl.CULL_FACE);
 
-  // ground
-  gl.useProgram(progGround);
-  gl.uniformMatrix4fv(U.ground.uVP, false, vp);
-  gl.uniform3f(U.ground.uCam, cam.x, cam.y, cam.z);
-  gl.uniform3fv(U.ground.uFog, FOG);
+  gl.uniform1f(U.shadow.uInstanced, 0);
   gl.bindVertexArray(vaoGround);
   gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-  // instanced pillars
-  gl.useProgram(progObj);
-  gl.uniformMatrix4fv(U.obj.uVP, false, vp);
-  gl.uniform3f(U.obj.uCam, cam.x, cam.y, cam.z);
-  gl.uniform3fv(U.obj.uFog, FOG);
-  gl.uniform3f(U.obj.uLightDir, 0.45, 0.82, 0.35);
-  gl.bindVertexArray(vaoCube);
-  gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, count);
+  gl.uniform1f(U.shadow.uInstanced, 1);
+  gl.bindVertexArray(cube.vao);
+  gl.drawArraysInstanced(gl.TRIANGLES, 0, cubeVerts, instCount);
 
-  // composite
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.enable(gl.CULL_FACE);
+}
+
+function drawScene() {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, FBO.hdr.fbo);
+  gl.viewport(0, 0, vw, vh);
+  gl.depthMask(true);
+  gl.enable(gl.DEPTH_TEST);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  // sky: fullscreen, no depth write
+  gl.disable(gl.DEPTH_TEST);
+  gl.depthMask(false);
+  gl.useProgram(progs.sky);
+  setCommon(U.sky);
+  gl.uniformMatrix4fv(U.sky.uInvVP, false, invVP);
+  gl.activeTexture(gl.TEXTURE3);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.shadow.color);
+  gl.bindVertexArray(vaoFS);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthMask(true);
+
+  // ground: single quad, double-sided
+  gl.disable(gl.CULL_FACE);
+  gl.useProgram(progs.ground);
+  setCommon(U.ground);
+  gl.uniformMatrix4fv(U.ground.uVP, false, vp);
+  gl.uniform1f(U.ground.uWetness, 1.0);
+  gl.bindVertexArray(vaoGround);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  gl.enable(gl.CULL_FACE);
+
+  // props
+  gl.useProgram(progs.prop);
+  setCommon(U.prop);
+  gl.uniformMatrix4fv(U.prop.uVP, false, vp);
+  gl.bindVertexArray(cube.vao);
+  gl.drawArraysInstanced(gl.TRIANGLES, 0, cubeVerts, instCount);
+
+  // cores: additive, depth tested, no depth write
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE);
+  gl.depthMask(false);
+  gl.disable(gl.CULL_FACE);
+  gl.useProgram(progs.core);
+  setCommon(U.core);
+  gl.uniformMatrix4fv(U.core.uVP, false, vp);
+  gl.uniform3f(U.core.uRight, Math.cos(cam.yaw), 0, -Math.sin(cam.yaw));
+  gl.uniform3f(U.core.uUp, 0, 1, 0);
+  gl.uniform1f(U.core.uSize, 0.80);
+  gl.bindVertexArray(vaoQuad);
+  for (const c of world.cores) {
+    gl.uniform3f(U.core.uCenter, c.x, c.y + Math.sin(time * 1.6 + c.seed) * 0.10, c.z);
+    gl.uniform1f(U.core.uTaken, c.taken);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
+  // motes
+  gl.useProgram(progs.mote);
+  setCommon(U.mote);
+  gl.uniformMatrix4fv(U.mote.uVP, false, vp);
+  gl.uniform1f(U.mote.uPx, DPR * 26.0);
+  gl.bindVertexArray(vaoMote);
+  gl.drawArrays(gl.POINTS, 0, moteCount);
+
+  gl.disable(gl.BLEND);
+  gl.depthMask(true);
+  gl.enable(gl.CULL_FACE);
+}
+
+function drawVol() {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, FBO.vol.fbo);
+  gl.viewport(0, 0, FBO.vol.w, FBO.vol.h);
+  gl.disable(gl.DEPTH_TEST);
+  gl.useProgram(progs.vol);
+  setCommon(U.vol);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.hdr.depth);
+  gl.uniform1i(U.vol.uDepth, 0);
+  gl.activeTexture(gl.TEXTURE3);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.shadow.color);
+  gl.uniformMatrix4fv(U.vol.uInvVP, false, invVP);
+  gl.uniform1f(U.vol.uNear, 0.1);
+  gl.uniform1f(U.vol.uFar, 400);
+  gl.uniform1f(U.vol.uSteps, Q.vol);
+  gl.uniform1f(U.vol.uSigma, 0.0075);
+  gl.bindVertexArray(vaoFS);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+function drawAO() {
+  if (!Q.ao) return;
+  const hw = FBO.aoA.w, hh = FBO.aoA.h;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, FBO.aoA.fbo);
+  gl.viewport(0, 0, hw, hh);
+  gl.disable(gl.DEPTH_TEST);
+  gl.useProgram(progs.ao);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.hdr.depth);
+  gl.uniform1i(U.ao.uDepth, 0);
+  gl.uniformMatrix4fv(U.ao.uInvVP, false, invVP);
+  gl.uniformMatrix4fv(U.ao.uVP, false, vp);
+  gl.uniform3f(U.ao.uCamPos, cam.x, cam.y, cam.z);
+  gl.uniform1f(U.ao.uNear, 0.1);
+  gl.uniform1f(U.ao.uFar, 400);
+  gl.uniform1f(U.ao.uRadius, 0.42);
+  gl.bindVertexArray(vaoFS);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  gl.useProgram(progs.blur);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.hdr.depth);
+  gl.uniform1i(U.blur.uDepth, 0);
+  gl.uniform1f(U.blur.uNear, 0.1);
+  gl.uniform1f(U.blur.uFar, 400);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.aoA.color);
+  gl.uniform1i(U.blur.uTex, 1);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, FBO.aoB.fbo);
+  gl.uniform2f(U.blur.uDir, 1.0 / hw, 0);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, FBO.aoA.fbo);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.aoB.color);
+  gl.uniform2f(U.blur.uDir, 0, 1.0 / hh);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+function drawBloom() {
+  gl.disable(gl.DEPTH_TEST);
+  gl.disable(gl.BLEND);
+  gl.useProgram(progs.down);
+  gl.bindVertexArray(vaoFS);
+  let src = FBO.hdr, sw = vw, sh = vh;
+  for (let i = 0; i < FBO.bloom.length; i++) {
+    const dst = FBO.bloom[i];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
+    gl.viewport(0, 0, dst.w, dst.h);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, src.color);
+    gl.uniform1i(U.down.uTex, 0);
+    gl.uniform2f(U.down.uTexel, 1 / sw, 1 / sh);
+    gl.uniform1f(U.down.uFirst, i === 0 ? 1 : 0);
+    gl.uniform1f(U.down.uThresh, HDR.on ? 2.4 : 0.72);   // LDR clips at 1.0: threshold in display range
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    src = dst; sw = dst.w; sh = dst.h;
+  }
+  // upsample adds into the existing higher mip, so no read-write hazard
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE);
+  gl.useProgram(progs.up);
+  for (let i = FBO.bloom.length - 1; i > 0; i--) {
+    const low = FBO.bloom[i], high = FBO.bloom[i - 1];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, high.fbo);
+    gl.viewport(0, 0, high.w, high.h);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, low.color);
+    gl.uniform1i(U.up.uLow, 0);
+    gl.uniform2f(U.up.uTexel, 1 / low.w, 1 / low.h);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+  gl.disable(gl.BLEND);
+}
+
+function drawComposite() {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, FBO.ldr.fbo);
   gl.viewport(0, 0, vw, vh);
   gl.disable(gl.DEPTH_TEST);
-  gl.useProgram(progPost);
+  gl.useProgram(progs.comp);
+
   gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.uniform1i(U.post.uTex, 0);
-  gl.uniform1f(U.post.uTime, performance.now() / 1000);
-  gl.uniform1f(U.post.uVig, 0.55);
-  gl.bindVertexArray(vaoEmpty);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.hdr.color);
+  gl.uniform1i(U.comp.uColor, 0);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.vol.color);
+  gl.uniform1i(U.comp.uVol, 1);
+  gl.activeTexture(gl.TEXTURE2);
+  gl.bindTexture(gl.TEXTURE_2D, Q.ao ? FBO.aoA.color : FBO.vol.color);
+  gl.uniform1i(U.comp.uAO, 2);
+  gl.activeTexture(gl.TEXTURE4);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.bloom[0].color);
+  gl.uniform1i(U.comp.uBloom, 4);
+  gl.activeTexture(gl.TEXTURE5);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.hdr.depth);
+  gl.uniform1i(U.comp.uDepth, 5);
+
+  gl.uniform2f(U.comp.uHalf, FBO.vol.w, FBO.vol.h);
+  gl.uniform1f(U.comp.uExposure, 0.60);
+  gl.uniform1f(U.comp.uTime, time);
+  gl.uniform1f(U.comp.uBloomK, 0.028);
+  gl.uniform1f(U.comp.uAoK, Q.ao ? 0.75 : 0.0);
+  gl.uniform1f(U.comp.uVolK, 1.0);
+  gl.uniform1f(U.comp.uVig, 0.42);
+  gl.bindVertexArray(vaoFS);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, vw, vh);
+  gl.useProgram(progs.final);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, FBO.ldr.color);
+  gl.uniform1i(U.final.uTex, 0);
+  gl.uniform2f(U.final.uRes, vw, vh);
+  gl.uniform1f(U.final.uTime, time);
+  gl.uniform1f(U.final.uGrain, 0.012);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
   gl.enable(gl.DEPTH_TEST);
 }
 
+function draw() {
+  perspective(proj, cam.fov * Math.PI / 180, vw / vh, 0.1, 400);
+  lookAt(viewM, cam.x, cam.y, cam.z,
+    cam.x + Math.sin(cam.yaw) * Math.cos(cam.pitch),
+    cam.y + Math.sin(cam.pitch),
+    cam.z + Math.cos(cam.yaw) * Math.cos(cam.pitch),
+    0, 1, 0);
+  mul(vp, proj, viewM);
+  invert(invVP, vp);
+
+  // light matrix fitted to the yard; texel snapping would go here for a moving camera
+  const eye = [SUN.dir[0] * 60, SUN.dir[1] * 60, SUN.dir[2] * 60];
+  lookAt(lightView, eye[0], eye[1], eye[2], 0, 0, 0, 0, 1, 0);
+  ortho(lightProj, -34, 34, -34, 34, 12, 105);
+  mul(lightVP, lightProj, lightView);
+
+  drawShadow();
+  drawScene();
+  drawVol();
+  drawAO();
+  drawBloom();
+  drawComposite();
+}
+
 /* --------------------------------- loop ------------------------------ */
-let last = 0, frames = 0, times = [], acc = 0;
+let last = 0, frames = 0, times = [], acc = 0, ready = false;
 const STEP = 1 / 60;
 
-function frame(now){
+function frame(now) {
   requestAnimationFrame(frame);
   if (!last) last = now;
   const raw = (now - last) / 1000;
   last = now;
-  const dt = Math.min(raw, .1);
+  const dt = Math.min(raw, 0.1);
+  time += dt;
 
   if (scene === 'play') {
     acc += dt;
     let guard = 0;
     while (acc >= STEP && guard++ < 5) { updateCamera(STEP); acc -= STEP; }
+    gameUpdate(dt);
   } else {
     look.dx = look.dy = 0;
+    stickVec = { x: 0, y: 0 };
+    if (scene === 'title' || scene === 'boot') {
+      // slow establishing drift: the title screen is a shot, not a poster
+      if (!REDUCE) {
+        cam.yaw += dt * 0.028;
+        cam.x = Math.sin(time * 0.05) * 1.2;
+        cam.z = 13 + Math.cos(time * 0.04) * 0.8;
+        cam.y = 1.7 + Math.sin(time * 0.12) * 0.05;
+      }
+    }
   }
 
-  if (ok) draw();
+  if (ok && ready) draw();
   stats(dt);
 }
 
-function stats(dt){
+function stats(dt) {
   times.push(dt * 1000);
-  if (times.length > 120) times.shift();
+  if (times.length > 90) times.shift();
   frames++;
-  if (frames % 12) return;
-  const s = [...times].sort((a, b) => a - b);
-  const avg = times.reduce((a, b) => a + b, 0) / times.length;
-  const fps = 1000 / avg;
+  if (frames % 10) return;
+  const s = times.slice().sort((a, b) => a - b);
+  const med = s[s.length >> 1] || 16;
+  const fps = 1000 / med;
   $('#h-fps').textContent = fps.toFixed(0);
-  $('#h-x').textContent = cam.x.toFixed(1);
-  $('#h-z').textContent = cam.z.toFixed(1);
   const d = $('#dbg');
   if (!d.hidden) {
-    d.textContent = 'tier ' + quality.toFixed(2) + '  dpr ' + DPR.toFixed(2) +
-      '\nbuf ' + vw + 'x' + vh + '\nfps ' + fps.toFixed(0) +
-      '\nmed ' + (s[Math.floor(s.length / 2)] || 0).toFixed(1) + 'ms' +
-      '\np99 ' + (s[Math.floor(s.length * .99)] || 0).toFixed(1) + 'ms' +
-      '\nerr ' + ERRS.length;
+    d.textContent = 'tier ' + Q.tier + '  scale ' + Q.scale.toFixed(2) +
+      '\nbuf ' + vw + 'x' + vh + (HDR.on ? ' hdr' : ' ldr') +
+      '\nfps ' + fps.toFixed(0) + '  med ' + med.toFixed(1) + 'ms' +
+      '\nerrs ' + ERRS.length;
   }
-  // adaptive: one step down when sustained slow, one step up when clearly fast
-  if (frames > 240) {
-    const med = s[Math.floor(s.length / 2)] || 16;
-    if (med > 22 && quality > .6) { quality = Math.max(.6, quality - .2); resize(); }
-    else if (med < 11 && quality < 1.3) { quality = Math.min(1.3, quality + .2); resize(); }
+  // adaptive: resolution first, then the expensive passes
+  if (frames > 180) {
+    if (med > 26 && Q.scale > 0.62) { Q.scale = Math.max(0.62, Q.scale - 0.12); resize(); }
+    else if (med > 34 && Q.vol > 12) { Q.vol = 12; Q.ao = false; Q.tier = 1; resize(); }
+    else if (med < 12 && Q.scale < 1.0) { Q.scale = Math.min(1.0, Q.scale + 0.08); resize(); }
+    $('#h-tier').innerHTML = 'TIER <b>' + (Q.tier === 2 ? 'HIGH' : Q.tier === 1 ? 'MID' : 'LOW') + '</b>';
   }
 }
 
-/* -------------------------------- scenes ----------------------------- */
+/* ============================== GAME (replace this block) ===========
+   The rules live here. Everything above (pipeline, shading, camera) is the
+   look; everything below (scenes, input, audio) is the shell. Rewrite this
+   block and the game changes without touching the renderer. Nothing here
+   may reach outside the file: no fetch, no assets, no libraries.
+   =================================================================== */
 let scene = 'boot';
+let state = { cores: 0, t: 120, wins: 0, over: false };
+
+function resetRun() {
+  state = { cores: 0, t: 120, wins: state.wins, over: false };
+  world.cores.forEach(c => { c.taken = 0; });
+  cam.x = 0; cam.z = 13; cam.yaw = Math.PI; cam.pitch = -0.03;
+  $('#h-cores').textContent = '0/4';
+  $('#h-time').textContent = '120.0';
+  $('#h-bar').style.width = '0%';
+  $('#over').classList.add('hide');
+}
+
+function gameUpdate(dt) {
+  if (state.over) return;
+  state.t -= dt;
+  if (state.t <= 0) { state.t = 0; endRun(false); }
+  $('#h-time').textContent = state.t.toFixed(1);
+  for (const c of world.cores) {
+    if (c.taken) continue;
+    if (Math.hypot(cam.x - c.x, cam.z - c.z) < 1.5) {
+      c.taken = 1;
+      state.cores++;
+      cam.shake = 1;
+      tone(520, 0.5, 'triangle', 0.14, 780);
+      tone(1040, 0.7, 'sine', 0.06, 1560);
+      $('#h-cores').textContent = state.cores + '/4';
+      $('#h-bar').style.width = (state.cores / 4 * 100) + '%';
+      if (state.cores >= 4) endRun(true);
+    }
+  }
+}
+
+function endRun(win) {
+  state.over = true;
+  if (win) state.wins++;
+  $('#over-eyebrow').textContent = win ? 'Run complete' : 'Signal lost';
+  $('#over-title').textContent = win ? 'All cores' : 'Light gone';
+  $('#over-body').textContent = win
+    ? 'Four signals recovered with ' + state.t.toFixed(1) + 's of light to spare.'
+    : 'The yard went dark with ' + state.cores + ' of 4 cores recovered.';
+  go('over');
+  if (win) { tone(392, 0.9, 'sine', 0.12); tone(587, 1.2, 'sine', 0.08); }
+  else tone(120, 1.1, 'sawtooth', 0.08, 60);
+}
+/* ============================== end GAME ============================= */
+
+/* -------------------------------- scenes ----------------------------- */
 const show = s => $(s).classList.remove('hide');
 const hide = s => $(s).classList.add('hide');
 
-function go(next){
-  if (next === 'play') hide('#title'), hide('#pause');
-  if (next === 'title') { show('#title'); hide('#pause'); }
+function go(next) {
+  if (next === 'play') { hide('#title'); hide('#pause'); hide('#over'); }
+  if (next === 'title') { show('#title'); hide('#pause'); hide('#over'); }
   if (next === 'paused') show('#pause');
+  if (next === 'over') show('#over');
   scene = next;
 }
-function togglePause(){
-  if (scene === 'play') go('paused');
-  else if (scene === 'paused') go('play');
+
+function togglePause() {
+  if (scene === 'play') { go('paused'); if (AC) AC.suspend().catch(() => {}); }
+  else if (scene === 'paused') { go('play'); if (AC) AC.resume().catch(() => {}); }
 }
 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const a = b.dataset.act;
-  if (a === 'start') { go('play'); tone(420, .18, 'sine', .06, 640); }
-  if (a === 'resume') go('play');
-  if (a === 'quit') go('title');
+  if (a === 'start') { resetRun(); go('play'); tone(440, 0.25, 'sine', 0.1, 660); }
+  if (a === 'again') { resetRun(); go('play'); }
+  if (a === 'resume') { go('play'); if (AC) AC.resume().catch(() => {}); }
+  if (a === 'quit') { go('title'); }
+  if (a === 'pause') { go('paused'); }
 });
 
 document.addEventListener('visibilitychange', () => {
@@ -674,42 +1878,61 @@ document.addEventListener('visibilitychange', () => {
     if (AC && AC.state === 'running') AC.suspend().catch(() => {});
   } else {
     last = performance.now();
-    if (AC && AC.state === 'suspended') AC.resume().catch(() => {});
+    if (AC && AC.state === 'suspended' && scene === 'play') AC.resume().catch(() => {});
   }
 });
 
 /* --------------------------------- boot ------------------------------ */
-async function boot(){
+async function boot() {
   const fill = $('#boot-fill'), msg = $('#boot-msg');
-  const stepTo = async (label, pct) => { msg.textContent = label + '…'; fill.style.width = pct + '%'; await wait(150); };
+  const stepTo = async (label, pct) => {
+    msg.textContent = label + '…';
+    fill.style.width = pct + '%';
+    await wait(140);
+  };
 
-  resize();
-  await stepTo('compiling shaders', 20);
+  W = cv.clientWidth || innerWidth;
+  H = cv.clientHeight || innerHeight;
+  DPR = Math.min(devicePixelRatio || 1, 1.75);
+  cv.width = Math.round(W * DPR);
+  cv.height = Math.round(H * DPR);
+  vw = cv.width; vh = cv.height;
+
+  await stepTo('compiling shaders', 24);
   try {
     initGL();
   } catch (e) {
     fatal(e);
-    $('#boot-msg').textContent = 'renderer unavailable — see message below';
+    msg.textContent = 'renderer unavailable';
     $('#boot').classList.add('done');
-    setTimeout(() => { show('#title'); hide('#boot'); }, 900);
+    setTimeout(() => { show('#title'); hide('#boot'); }, 800);
     return;
   }
-  await stepTo('building geometry', 52);
-  resize();
-  await stepTo('baking targets', 78);
+  await stepTo('building the yard', 54);
+  await stepTo('baking the shadow map', 78);
   await stepTo('ready', 100);
+  ready = true;
 
   if (ok) draw();
   go('title');
   $('#boot').classList.add('done');
-  setTimeout(() => $('#boot').classList.add('hide'), 600);
+  setTimeout(() => $('#boot').classList.add('hide'), 700);
 }
 
-window.G = { get scene(){ return scene; }, get errs(){ return ERRS.length; }, get ok(){ return ok; } };
+window.G = {
+  get scene() { return scene; },
+  get errs() { return ERRS.length; },
+  get ok() { return ok; },
+  get tier() { return Q.tier; },
+  get cores() { return state.cores; },
+  get hdr() { return HDR.on; },
+  get pos() { return [+cam.x.toFixed(2), +cam.y.toFixed(2), +cam.z.toFixed(2)]; },
+  get gpu() { return gl ? gl.getParameter(gl.RENDERER) : null; },
+};
 if (new URLSearchParams(location.search).has('debug')) $('#dbg').hidden = false;
 
-addEventListener('resize', () => { resize(); }, { passive: true });
-addEventListener('orientationchange', () => setTimeout(resize, 120));
+addEventListener('resize', resize, { passive: true });
+addEventListener('orientationchange', () => setTimeout(resize, 150));
 
 requestAnimationFrame(frame);
 boot();
