@@ -21,12 +21,14 @@
 「ゲームの作り方」を解説するチュートリアルではありません。実際の単一ファイルゲームから抽出し、
 本当に効く部分だけを残した**実行可能な手法**と、それを強制するツール群です。
 
-| 2D テンプレート | 3D テンプレート |
+| 2D テンプレート（生成直後） | 3D —— これで作ったゲーム |
 | --- | --- |
-| ![2D starter](docs/starter-2d.png) | ![3D starter](docs/starter-3d.png) |
-| Canvas 2D · 28 KB · 収集・回避・スコア・保存 | WebGL2 · 75 KB · HDR、ソフトシャドウ、ボリューメトリック、Bloom、ACES |
+| ![2D starter](docs/starter-2d.png) | ![3D game](docs/game-3d.png) |
+| Canvas 2D · 28 KB · 収集・回避・スコア・保存 | WebGL2 · 140 KB · オープンフィールド、HDR、ソフトシャドウ、ボリューメトリック |
 
-どちらのスクリーンショットも `assets/` の実物を、通信を切った状態で `file://` から動かしたものです。フレーム内に画像ファイルは 1 枚もありません。
+左は `assets/starter-2d.html` を生成したままの画面です。右は同じルールで作り込んだ完成品の
+ゲームで、単一ファイル、地形もキャラクターも実行時に生成され、ディスク上にテクスチャはありません。
+どちらも通信を切って `file://` から実行しており、フレーム内に画像ファイルは 1 枚もありません。
 
 ## 単一ファイルは「試作画質」の言い訳ではない
 
@@ -52,6 +54,10 @@
 
 数値と失敗モードは [`references/cinematic-look.md`](references/cinematic-look.md) と
 [`references/material-authoring.md`](references/material-authoring.md) にあります。
+
+テンプレートは、自分のコードを 1 行も書く前からこの画面を出します:
+
+![3D テンプレートの初期状態](docs/starter-3d.png)
 
 ## 四つのルール
 

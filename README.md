@@ -23,13 +23,15 @@ bundler, or anyone else's uptime.
 It is not a tutorial about "making games". It is a working method plus the tooling that
 enforces it, extracted from real single-file games and reduced to what actually matters.
 
-| 2D starter | 3D starter |
+| 2D starter, as generated | 3D — a game shipped with it |
 | --- | --- |
-| ![2D starter](docs/starter-2d.png) | ![3D starter](docs/starter-3d.png) |
-| Canvas 2D · 28 KB · collect, dodge, score, save | WebGL2 · 75 KB · HDR, shadows, volumetrics, bloom, ACES |
+| ![2D starter](docs/starter-2d.png) | ![3D game](docs/game-3d.png) |
+| Canvas 2D · 28 KB · collect, dodge, score, save | WebGL2 · 140 KB · open field, HDR, shadows, volumetrics |
 
-Both screenshots are the actual templates in `assets/`, running from `file://` with the
-network off. Nothing in either frame is an image file.
+The left frame is `assets/starter-2d.html` straight out of the generator. The right is a
+finished game built from the same rules — one file, terrain and characters generated at
+runtime, not a texture on disk. Both run from `file://` with the network off, and neither
+frame contains an image file.
 
 ## It has to look shipped
 
@@ -58,6 +60,10 @@ What that buys, concretely:
 The full reasoning, numbers and failure modes are in
 [`references/cinematic-look.md`](references/cinematic-look.md) and
 [`references/material-authoring.md`](references/material-authoring.md).
+
+The template itself already renders this, before you write a line of your own:
+
+![The 3D starter out of the box](docs/starter-3d.png)
 
 ## The four rules
 

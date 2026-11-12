@@ -21,12 +21,14 @@
 "게임 만드는 법"을 설명하는 튜토리얼이 아닙니다. 실제 단일 파일 게임에서 뽑아내어 정말로 효과가 있는
 부분만 남긴 **실행 가능한 방법**과, 그 방법을 강제하는 도구 모음입니다.
 
-| 2D 템플릿 | 3D 템플릿 |
+| 2D 템플릿 (생성 직후) | 3D — 이것으로 만든 게임 |
 | --- | --- |
-| ![2D starter](docs/starter-2d.png) | ![3D starter](docs/starter-3d.png) |
-| Canvas 2D · 28 KB · 수집·회피·점수·저장 | WebGL2 · 75 KB · HDR, 소프트 섀도, 볼류메트릭, Bloom, ACES |
+| ![2D starter](docs/starter-2d.png) | ![3D game](docs/game-3d.png) |
+| Canvas 2D · 28 KB · 수집·회피·점수·저장 | WebGL2 · 140 KB · 오픈 필드, HDR, 소프트 섀도, 볼류메트릭 |
 
-두 스크린샷 모두 `assets/`의 실제 템플릿을 네트워크를 끈 상태에서 `file://`로 실행한 화면입니다. 프레임 안에 이미지 파일은 하나도 없습니다.
+왼쪽은 `assets/starter-2d.html`을 생성한 그대로의 화면입니다. 오른쪽은 같은 규칙으로 완성한
+게임으로, 단일 파일에 지형과 캐릭터가 모두 실행 중에 생성되며 디스크에 텍스처가 없습니다.
+둘 다 네트워크를 끈 상태에서 `file://`로 실행했고, 프레임 안에 이미지 파일은 하나도 없습니다.
 
 ## 단일 파일은 '프로토타입 화질'의 변명이 아니다
 
@@ -52,6 +54,10 @@
 
 수치와 실패 모드는 [`references/cinematic-look.md`](references/cinematic-look.md)와
 [`references/material-authoring.md`](references/material-authoring.md)에 있습니다.
+
+템플릿은 직접 코드를 한 줄도 쓰기 전부터 이 화면을 보여줍니다:
+
+![3D 템플릿 기본 화면](docs/starter-3d.png)
 
 ## 네 가지 규칙
 

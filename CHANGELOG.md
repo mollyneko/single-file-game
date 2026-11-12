@@ -39,6 +39,9 @@ looked like a prototype; "single file" was never meant to be an excuse for that.
   restart, and a win/lose card.
 - READMEs (all four languages) document the pipeline and the quality bar; the screenshots are
   re-captured from the new render.
+- The README hero row now shows what the skill actually produces: a 2D starter next to a
+  finished single-file 3D game (`docs/game-3d.png`), with the bare 3D template moved inline as
+  the "before you write a line" proof.
 
 ### Fixed
 

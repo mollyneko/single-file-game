@@ -20,12 +20,14 @@
 这不是"如何做游戏"的教程。它是一套可执行的方法，加上强制这套方法的工具链，从真实的单文件游戏中
 提炼，只保留真正起作用的部分。
 
-| 2D 模板 | 3D 模板 |
+| 2D 模板（生成即用） | 3D —— 用它做出来的游戏 |
 | --- | --- |
-| ![2D 模板](docs/starter-2d.png) | ![3D 模板](docs/starter-3d.png) |
-| Canvas 2D · 28 KB · 收集、闪避、计分、存档 | WebGL2 · 75 KB · HDR、软阴影、体积光、Bloom、ACES |
+| ![2D 模板](docs/starter-2d.png) | ![3D 游戏](docs/game-3d.png) |
+| Canvas 2D · 28 KB · 收集、闪避、计分、存档 | WebGL2 · 140 KB · 开放地形、HDR、软阴影、体积光 |
 
-两张截图都是 `assets/` 里的实际模板，在断网状态下用 `file://` 直接运行。画面里没有一个图片文件。
+左图是 `assets/starter-2d.html` 从生成器里出来的原样。右图是照同一套规则做出来的完整游戏：
+单文件，地形和角色都在运行时生成，磁盘上没有一张贴图。两张都在断网状态下用 `file://` 直接
+运行，画面里没有一个图片文件。
 
 ## 单文件不等于原型画质
 
@@ -50,6 +52,10 @@
 
 完整推导、数值与失败模式见 [`references/cinematic-look.md`](references/cinematic-look.md) 与
 [`references/material-authoring.md`](references/material-authoring.md)。
+
+模板本身开箱就是这样，你还没写一行自己代码的时候：
+
+![3D 模板开箱画面](docs/starter-3d.png)
 
 ## 四条铁律
 
