@@ -35,6 +35,32 @@ These are non-negotiable. Violating one breaks the format.
 7. **Input parity from commit one.** Keyboard, pointer, touch and gamepad resolve into one
    intent object. Mobile is not a later milestone.
 
+## Quality bar
+
+"One HTML file" is the format, not the ambition. A file that passes the rules but looks like a
+coloured prototype fails this skill. The render has to hold up next to a shipped title, and
+that is a short, checkable list:
+
+1. **One sun, and the camera sees it.** A single directional key, 10–20° elevation, 30–50° off
+   the view axis, so the surfaces you look at carry a gradient. Backlit silhouettes alone are a
+   mood, not a lighting setup.
+2. **A sky that is a function.** The dome, the ambient fill, the fog colour and the puddle
+   reflections all call the same `skyColor()`. If the horizon is a different colour from the
+   reflection, the scene disintegrates.
+3. **Contact shadows.** Shadow map + AO. Objects that do not sit on the ground read as stickers.
+4. **Atmosphere between you and the far plane.** Height fog, plus volumetrics if there is a sun.
+5. **Surfaces with scale.** Every material carries wear, seams or aggregate — see
+   `references/material-authoring.md`. One albedo per object is a placeholder.
+6. **A linear pipeline with an sRGB encode at the end.** HDR buffer, ACES, grade, then encode.
+   Skipping the encode is the number one reason a hand-written renderer looks like night.
+7. **Motion everywhere.** Camera drift, walk bob, dust, a 1.5 s shake decay — see
+   `references/game-feel.md`.
+8. **A frame that reads in ten seconds.** Run the test at the end of
+   `references/cinematic-look.md` before calling it done.
+
+If the game is 2D, items 1–4 and 6 collapse into palette, light direction and a glow pass; the
+rest still apply.
+
 ## Workflow
 
 ### 1. Scope in one sentence
@@ -67,7 +93,7 @@ the shell, replace the rules.
 
 Order matters. Each layer must be observable before the next is written:
 
-1. Loop + resize + DPR (nothing visible yet — verify with a debug readout).
+1. Loop + resize + DPR + colour pipeline (nothing visible yet — verify with a debug readout).
 2. Input intent (verify by moving a rectangle).
 3. Scene machine (`boot → title → play → paused → over`).
 4. Art primitives (verify by drawing a static scene).
@@ -78,21 +104,36 @@ Order matters. Each layer must be observable before the next is written:
 A one-line debug HUD (`scene`, `fps`, `entities`, `errors`) after step 1 saves hours by
 step 6. See `references/resilience-and-a11y.md`.
 
-### 4. Make it feel alive
+### 4. Light it like a shot, not like a test scene
+
+Before adding content, spend one pass on the frame, in this order:
+
+1. **Composition.** One foreground object, one subject, a skyline gap where the sun sets.
+2. **Key light.** Pick the direction, then derive ambient, fog and rim from the same vector.
+3. **Materials.** Five channels per surface (albedo, roughness, metal, height, AO), wear in
+   primer → oxide order, seams at a physical plate size.
+4. **Atmosphere.** Height fog first, volumetrics second.
+5. **Post.** HDR → bloom → ACES → grade → sRGB encode. Check the encode before you touch
+   exposure.
+
+`references/cinematic-look.md` has the numbers and the failure each one prevents;
+`references/material-authoring.md` has the surface half.
+
+### 5. Make it feel alive
 
 Cheap, high-yield, in this order: a 2–4px screen shake on impact, a short particle burst on
 every state change, a 120ms scale-pop on the thing you just hit, a vignette, a two-note
 audio tick on every action, an idle animation (breathing, bobbing) on anything alive. These
-buy more perceived quality than polygon count. Concretely, see
-`references/design-language.md` and `references/procedural-art-2d.md`.
+buy more perceived quality than polygon count. Every state change needs two channels —
+`references/game-feel.md` is the table.
 
-### 5. Persist and resume
+### 6. Persist and resume
 
 Best score, progress and settings are separate keys. Version them, wrap every storage call
 in `try/catch` (private mode throws), and never let a corrupt save block boot. See
 `references/state-and-persistence.md`.
 
-### 6. Audit before you ship
+### 7. Audit before you ship
 
 ```bash
 python scripts/check_single_file.py ./orb-runner.html --strict
@@ -120,6 +161,9 @@ referenced before definition. No classes needed unless state is genuinely per-in
 | `references/architecture.md` | You need the shell, the scene machine, or the loop contract |
 | `references/procedural-art-2d.md` | Drawing characters, tiles, effects, palettes |
 | `references/procedural-3d.md` | WebGL2 setup, generated textures, tone mapping, quality tiers |
+| `references/cinematic-look.md` | The full render stack: sun, sky, shadows, volumetrics, bloom, grade |
+| `references/material-authoring.md` | PBR channels, wear, seams, triplanar, water, baking |
+| `references/game-feel.md` | Hitstop, shake, easing, particles, audio layering, HUD motion |
 | `references/procedural-audio.md` | Any sound: SFX table, noise, step-sequenced music |
 | `references/input-and-mobile.md` | Touch, pointer lock fallback, gamepad, safe areas |
 | `references/state-and-persistence.md` | Saves, settings, migration, autosave |
@@ -133,9 +177,9 @@ referenced before definition. No classes needed unless state is genuinely per-in
 | Path | Purpose |
 | --- | --- |
 | `SKILL.md` | This file: rules, workflow, index |
-| `references/` | Ten deep dives, each independently readable |
-| `assets/starter-2d.html` | Runnable canvas shell — 28 KB, already playable |
-| `assets/starter-3d.html` | Runnable WebGL2 shell — 27 KB, instanced geometry + grade |
+| `references/` | Thirteen deep dives, each independently readable |
+| `assets/starter-2d.html` | Runnable canvas shell — playable, bloom-lite and juice included |
+| `assets/starter-3d.html` | Runnable WebGL2 slice — HDR, shadows, volumetrics, SSAO, bloom, ACES |
 | `scripts/scaffold.py` | Generate a named game from either shell |
 | `scripts/check_single_file.py` | Format audit; `--strict` for the ship gate |
 | `docs/method.md` | Why the constraints exist, and when not to use this method |
@@ -155,6 +199,14 @@ referenced before definition. No classes needed unless state is genuinely per-in
   call kills boot.
 - **Shipping without a restart path.** A game that ends in a dead screen is a demo, not a
   game.
+- **A scene made of untextured boxes under a flat ambient.** The fastest way to look like a
+  placeholder. One sun, one wear mask, one seam grid — thirty minutes, entire difference.
+- **Writing linear radiance into the canvas.** No encode, no highlights, no colour. Two lines
+  of transfer function stand between "night" and "dusk".
+- **Tuning exposure to hide a lighting problem.** If the ground needs exposure 2.0, the sun is
+  too low or the albedo is too dark. Fix the cause.
+- **Bloom as a glow effect.** It is a lens artefact at 3–6% strength; at 40% the frame turns
+  into fog.
 
 ## Handing off
 
