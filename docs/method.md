@@ -113,6 +113,27 @@ hand-authored instances.
 Determinism matters: seed the generator, store the seed, and a bug report becomes
 reproducible (`?seed=1234`). Use `Math.random()` only for cosmetic jitter.
 
+## Step 4.5 — Look development is a step, not a polish pass
+
+The most common failure of this format is not a bug. It is a file that is technically
+correct, ships, runs offline — and looks like a prototype: untextured boxes, flat ambient,
+one sun behind the subject, no atmosphere.
+
+Treat the look as a numbered step between systems and content, because it changes how content
+is built (materials and light decide what a prop needs to be). Five passes, in order:
+composition, key light, materials, atmosphere, post. [cinematic-look](../references/cinematic-look.md)
+carries the numbers; [material-authoring](../references/material-authoring.md) carries the
+surface half.
+
+Two rules from that file are worth repeating here because they cost entire days when missed:
+
+- **Encode to sRGB once, at the end.** Tone mapping ends in linear display values; the canvas
+  does not convert them. Skip it and the whole frame reads two stops dark, which sends you
+  into a false hunt for a lighting bug.
+- **Do not light the subject from behind unless the frame is a deliberate silhouette.** All
+  camera-facing surfaces then receive ambient only, every material flattens, and no amount of
+  wear or seams will read.
+
 ## Step 5 — Feel is a checklist, not a talent
 
 Cheap and high-yield, in order of impact per line of code:

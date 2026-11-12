@@ -26,10 +26,38 @@ enforces it, extracted from real single-file games and reduced to what actually 
 | 2D starter | 3D starter |
 | --- | --- |
 | ![2D starter](docs/starter-2d.png) | ![3D starter](docs/starter-3d.png) |
-| Canvas 2D · 28 KB · collect, dodge, score, save | WebGL2 · 27 KB · instanced geometry, post-process grade |
+| Canvas 2D · 28 KB · collect, dodge, score, save | WebGL2 · 75 KB · HDR, shadows, volumetrics, bloom, ACES |
 
 Both screenshots are the actual templates in `assets/`, running from `file://` with the
-network off.
+network off. Nothing in either frame is an image file.
+
+## It has to look shipped
+
+A single file is a constraint, not an excuse for a grey prototype. The 3D starter is the
+reference implementation of a small cinematic renderer, written from scratch in one `<script>`:
+
+```
+shadow map  ->  HDR scene (PBR sky + ground + props)  ->  volumetric sun shafts
+            ->  SSAO + bilateral blur  ->  bloom pyramid  ->  ACES + grade
+            ->  sRGB encode  ->  FXAA + grain
+```
+
+What that buys, concretely:
+
+- **One sun, one sky function.** The dome, the ambient fill, the fog and the puddle
+  reflections all call the same `skyColor()`, so the horizon you see and the horizon in the
+  water agree.
+- **Surfaces with scale.** Five channels per material — albedo, roughness, metal, height, AO —
+  plus paint wear in primer → oxide order, plate seams in object space, and a wet mask that
+  darkens, flattens and mirrors.
+- **Atmosphere.** A half-resolution raymarch with Henyey-Greenstein phase, height density and
+  per-step shadow lookups. This is what separates "3D" from "a place".
+- **A grade, not a filter.** ACES, split-toned shadows, a vignette and 1.2% grain, applied in
+  that order and encoded once at the end.
+
+The full reasoning, numbers and failure modes are in
+[`references/cinematic-look.md`](references/cinematic-look.md) and
+[`references/material-authoring.md`](references/material-authoring.md).
 
 ## The four rules
 
@@ -92,6 +120,9 @@ single-file-game/
 │   ├── architecture.md         file layout, scene machine, loop contract, resize/DPR
 │   ├── procedural-art-2d.md    seeded palettes, shape primitives, tile baking, effects
 │   ├── procedural-3d.md        WebGL2 setup, generated textures, grade, quality tiers
+│   ├── cinematic-look.md       the render stack: sun, sky, shadows, volumetrics, bloom, grade
+│   ├── material-authoring.md   PBR channels, wear, seams, triplanar, water, baking
+│   ├── game-feel.md            hitstop, shake, easing, particles, audio layering, HUD motion
 │   ├── procedural-audio.md     SFX bus, noise, step-sequenced music, mixing
 │   ├── input-and-mobile.md     one intent object, touch sticks, pointer lock, safe areas
 │   ├── state-and-persistence.md  save shape, versioning, migration, autosave
@@ -110,14 +141,16 @@ single-file-game/
 └── tests/                      unit tests for both tools
 ```
 
-## The method in six steps
+## The method in seven steps
 
 1. **Scope in one sentence.** One loop, one primary verb, one failure state, one restart.
 2. **Build the shell.** Tokens → boot → title → canvas → HUD → screens → error boundary.
 3. **Systems in dependency order.** Loop and resize first; input second; gameplay last.
-4. **Content as data.** Tables plus a seeded generator, not hand-authored instances.
-5. **Feel on purpose.** Shake, particles, pops, ticks, idle motion — all cheap, all checked.
-6. **Audit.** `check_single_file.py --strict`, then walk the release checklist.
+4. **Light it like a shot.** Composition, one key light, materials with wear, atmosphere,
+   then the post chain. Check the sRGB encode before touching exposure.
+5. **Content as data.** Tables plus a seeded generator, not hand-authored instances.
+6. **Feel on purpose.** Shake, particles, pops, ticks, idle motion — all cheap, all checked.
+7. **Audit.** `check_single_file.py --strict`, then walk the release checklist.
 
 Full reasoning in [`docs/method.md`](docs/method.md); operational detail in
 [`SKILL.md`](SKILL.md).
