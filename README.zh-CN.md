@@ -79,6 +79,7 @@ python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
 
 # 2. 替换 GAME 区块，然后审计
 python scripts/check_single_file.py orb-runner.html --strict
+python scripts/check_single_file.py night-shift.html --strict --craft   # 3D
 
 # 3. 打开它 —— 双击即可，或者：
 start orb-runner.html       # Windows
@@ -118,6 +119,7 @@ single-file-game/
 │   ├── procedural-art-2d.md    种子调色板、图形原语、瓦片烘焙、特效
 │   ├── procedural-3d.md        WebGL2 搭建、生成贴图、调色、画质档位
 │   ├── cinematic-look.md       渲染栈：太阳、天空、阴影、体积光、Bloom、调色
+│   ├── asset-craft.md          3D 交付硬门槛：倒角、材质库、生成贴图、连续蒙皮
 │   ├── material-authoring.md   PBR 通道、磨损、接缝、三平面投影、水面、烘焙
 │   ├── game-feel.md            顿帧、抖动、缓动、粒子、音频分层、HUD 动效
 │   ├── procedural-audio.md     SFX 总线、噪声、步进音乐、混音
@@ -147,7 +149,7 @@ single-file-game/
    编码，再动曝光。
 5. **内容即数据。** 表格加种子生成器，而不是手写一个个实例。
 6. **手感要刻意设计。** 抖动、粒子、弹跳、点击音、待机动画——成本很低，全部列成清单。
-7. **审计交付。** `check_single_file.py --strict`，再走一遍发布检查清单。
+7. **审计交付。** `check_single_file.py --strict`，3D 再加 `--craft`，然后走发布检查清单。
 
 完整论证见 [`docs/method.md`](docs/method.md)，操作细节见 [`SKILL.md`](SKILL.md)。
 
@@ -157,6 +159,7 @@ single-file-game/
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | 复制模板，写入标题、启动标识、存档命名空间与强调色 |
 | `python scripts/check_single_file.py X.html --strict` | 对远程资源、网络调用、缺失的壳部件、悬空元素 ID、超大文件直接判失败 |
+| `python scripts/check_single_file.py X.html --strict --craft` | 3D 交付硬门槛：缺几何工艺、具名材质库、生成贴图或连续蒙皮即失败 |
 | `python -m unittest discover -s tests -v` | 用已知好/坏文件测试审计器与脚手架 |
 
 审计器是这条工具链的重点。它专门抓这个格式最容易犯的错：为图省事加上的 `<script src>`、忘了删的

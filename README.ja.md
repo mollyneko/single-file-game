@@ -81,6 +81,7 @@ python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
 
 # 2. GAME ブロックを差し替えて、監査する
 python scripts/check_single_file.py orb-runner.html --strict
+python scripts/check_single_file.py night-shift.html --strict --craft   # 3D
 
 # 3. 開く — ダブルクリック、または:
 open orb-runner.html        # macOS
@@ -121,6 +122,7 @@ single-file-game/
 │   ├── procedural-art-2d.md    シード付きパレット、図形プリミティブ、タイル焼き込み、演出
 │   ├── procedural-3d.md        WebGL2 構築、生成テクスチャ、グレーディング、画質ティア
 │   ├── cinematic-look.md       レンダースタック：太陽、空、影、ボリューメトリック、Bloom、グレード
+│   ├── asset-craft.md          3D の必須要件：ベベル、材質ライブラリ、生成テクスチャ、スキニング
 │   ├── material-authoring.md   PBR チャンネル、摩耗、継ぎ目、トライプラナー、水面、ベイク
 │   ├── game-feel.md            ヒットストップ、揺れ、イージング、粒子、音の重ね、HUD モーション
 │   ├── procedural-audio.md     SFX バス、ノイズ、ステップシーケンス音楽、ミックス
@@ -150,7 +152,7 @@ single-file-game/
    露出を触る前に sRGB エンコードを確認する。
 5. **コンテンツはデータとして。** 手書きの実例ではなく、表とシード付き生成器。
 6. **手触りは意図的に設計する。** 揺れ、粒子、ポップ、クリック音、待機モーション——安価で、すべて点検項目。
-7. **監査して出す。** `check_single_file.py --strict`、その後にリリースチェックリスト。
+7. **監査して出す。** `check_single_file.py --strict`（3D は `--craft` も）、その後にリリースチェックリスト。
 
 論拠は [`docs/method.md`](docs/method.md)、実務的な詳細は [`SKILL.md`](SKILL.md) にあります。
 
@@ -160,6 +162,7 @@ single-file-game/
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | テンプレートを複製し、タイトル・起動表示・保存名前空間・アクセント色を設定 |
 | `python scripts/check_single_file.py X.html --strict` | リモート参照、通信呼び出し、欠けた殻、存在しない要素 ID、過大なサイズで失敗させる |
+| `python scripts/check_single_file.py X.html --strict --craft` | 3D の出荷ゲート：形状加工・材質ライブラリ・生成テクスチャ・スキニングの欠落で失敗 |
 | `python -m unittest discover -s tests -v` | 監査器とスキャフォールドを良品／不良品で検証 |
 
 このツール群の主役は監査器です。この形式が犯しがちなミスを狙い撃ちします。「とりあえず」足した

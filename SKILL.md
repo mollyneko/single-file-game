@@ -22,8 +22,10 @@ The constraint is the point:
 These are non-negotiable. Violating one breaks the format.
 
 1. **One file.** All CSS in one `<style>`, all JS in one `<script>` IIFE. No `<link href>`,
-   no `<script src>`, no `fetch`, no `import`, no web fonts. A 3D library, if you must, is
-   pasted inline and minified — never referenced.
+   no `<script src>`, no `fetch`, no `import`, no web fonts. A 3D library is pasted inline
+   and minified — never referenced. For 3D this is the **default**, not a last resort: "zero
+   external assets" means zero runtime requests, not zero library code. See
+   `references/asset-craft.md`.
 2. **Zero network at runtime.** Works with the network disabled. No telemetry, no analytics.
 3. **Art is drawn, not loaded.** Canvas 2D calls, CSS gradients, SVG, or shader-generated
    textures. Bake expensive art once into an offscreen canvas, then blit.
@@ -60,6 +62,35 @@ that is a short, checkable list:
 
 If the game is 2D, items 1–4 and 6 collapse into palette, light direction and a glow pass; the
 rest still apply.
+
+## Asset-craft gate (3D, non-negotiable)
+
+The quality bar judges the *frame*. This gate judges the *objects in it*. Comparing two
+single-file 3D games put the entire visual gap in the asset layer: the better one spent 645 KB
+on generated geometry, a 130-entry named material library, runtime Canvas textures and
+continuous skinning — while both had a complete post chain. A shipped 3D game meets all six:
+
+1. **Inline the engine.** Use a minified inline 3D library for PBR, IBL, shadows, skinning and
+   curve geometry. Hand-writing a renderer is only allowed once the asset layer is complete;
+   never trade asset depth for dependency purity.
+2. **No bare primitive is a finished asset.** Every visible object passes through a bevel, a
+   curved surface (lathe / tube / extrude / spline), per-vertex displacement, or a generated
+   texture. Boxes, spheres and capsules are intermediates.
+3. **Bevel, normals, seams.** Hard surfaces get a bevel ≥ 0.02 world units; generated geometry
+   recomputes normals; revolved meshes average the seam-ring normals.
+4. **Named materials with generated maps.** ≥ 12 named surfaces, each with albedo +
+   roughness + metalness (or equivalent shader channels), plus runtime-generated wear, seams
+   and decals. Raw RGB triples passed into a draw call are not a material system.
+5. **Continuous skinning.** Animated characters are one weighted skinned mesh, never one
+   primitive per bone.
+6. **Seeded, table-driven builders.** Object spec tables plus a builder with a named seed RNG,
+   a transform stack and material lookup. `Math.random()` must not decide silhouettes.
+
+Starters and in-progress scaffolds are exempt. A deliverable is not: the 3D ship gate is
+`python scripts/check_single_file.py game.html --strict --craft`, which fails on missing
+geometry craft, a missing material library, missing generated textures, or bones without
+skinning. Evidence, per-rule implementations and the catch-up order live in
+`references/asset-craft.md`.
 
 ## Workflow
 
@@ -137,10 +168,13 @@ in `try/catch` (private mode throws), and never let a corrupt save block boot. S
 
 ```bash
 python scripts/check_single_file.py ./orb-runner.html --strict
+python scripts/check_single_file.py ./night-shift.html --strict --craft   # 3D deliverable
 ```
 
-The audit fails on external references, missing element IDs, missing `<title>`/viewport, and
-a missing error boundary; it warns on size and frame-budget risks. Then walk
+The audit fails on external references, missing element IDs, missing `<title>`/viewport, a
+missing error boundary, and — with `--craft` — missing 3D asset craft; it warns on size and
+frame-budget risks. `--craft` is **mandatory** for a shipped 3D game; the format audit alone
+cannot see primitive stacks or an RGB-only palette. Then walk
 `references/release-checklist.md` — it is the ship gate, not a suggestion.
 
 ## What goes where
@@ -163,6 +197,7 @@ referenced before definition. No classes needed unless state is genuinely per-in
 | `references/procedural-3d.md` | WebGL2 setup, generated textures, tone mapping, quality tiers |
 | `references/cinematic-look.md` | The full render stack: sun, sky, shadows, volumetrics, bloom, grade |
 | `references/material-authoring.md` | PBR channels, wear, seams, triplanar, water, baking |
+| `references/asset-craft.md` | The 3D hard gate: inline engine, bevel, material library, generated maps, skinning, seeded builders |
 | `references/game-feel.md` | Hitstop, shake, easing, particles, audio layering, HUD motion |
 | `references/procedural-audio.md` | Any sound: SFX table, noise, step-sequenced music |
 | `references/input-and-mobile.md` | Touch, pointer lock fallback, gamepad, safe areas |
@@ -177,7 +212,7 @@ referenced before definition. No classes needed unless state is genuinely per-in
 | Path | Purpose |
 | --- | --- |
 | `SKILL.md` | This file: rules, workflow, index |
-| `references/` | Thirteen deep dives, each independently readable |
+| `references/` | Fourteen deep dives, each independently readable |
 | `assets/starter-2d.html` | Runnable canvas shell — playable, bloom-lite and juice included |
 | `assets/starter-3d.html` | Runnable WebGL2 slice — HDR, shadows, volumetrics, SSAO, bloom, ACES |
 | `scripts/scaffold.py` | Generate a named game from either shell |
@@ -201,6 +236,14 @@ referenced before definition. No classes needed unless state is genuinely per-in
   game.
 - **A scene made of untextured boxes under a flat ambient.** The fastest way to look like a
   placeholder. One sun, one wear mask, one seam grid — thirty minutes, entire difference.
+- **A finished asset that is a box, sphere or capsule.** Bevel it, revolve it, displace it or
+  texture it. A primitive used directly is an intermediate masquerading as an object.
+- **An RGB triple as a material.** Albedo is one channel. No roughness, no wear, no seam means
+  no scale — see `references/asset-craft.md`.
+- **One primitive per bone.** Widening the parts to hide the joint gaps produces beads on a
+  string; skin the mesh instead.
+- **Writing a renderer to avoid an inline engine.** Zero runtime requests is the rule. A
+  1.4 MB inline library is still one file, and buys PBR, IBL and skinning for free.
 - **Writing linear radiance into the canvas.** No encode, no highlights, no colour. Two lines
   of transfer function stand between "night" and "dusk".
 - **Tuning exposure to hide a lighting problem.** If the ground needs exposure 2.0, the sun is
@@ -210,6 +253,6 @@ referenced before definition. No classes needed unless state is genuinely per-in
 
 ## Handing off
 
-Report the file path, its size, what was verified (audit output, devices tested, frame
-budget observed) and the one thing you would build next. The player only ever needs the
-single file — say so explicitly.
+Report the file path, its size, what was verified (audit output — **including the 3D
+`--craft` result** — devices tested, frame budget observed) and the one thing you would
+build next. The player only ever needs the single file — say so explicitly.

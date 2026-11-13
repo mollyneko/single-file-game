@@ -4,6 +4,36 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-11-13
+
+The 3D asset layer is now a hard, machine-checked gate. Comparing two single-file 3D games
+showed the visual gap was not in the post stack (both had a complete one) but in generated
+geometry, a named material library, runtime textures and continuous skinning.
+
+### Added
+
+- `references/asset-craft.md` — the comparison evidence, six non-negotiable constraints
+  (inline engine, no bare primitives, bevel/normals/seams, named materials with generated
+  maps, continuous skinning, seeded table-driven builders), the catch-up order, and the
+  four signal groups `--craft` checks.
+- An **Asset-craft gate (3D, non-negotiable)** section in `SKILL.md`, four new anti-patterns,
+  and `--strict --craft` as the 3D ship gate in the workflow, release checklist and handoff.
+- `--craft` in `scripts/check_single_file.py`: hard failures for missing geometry craft,
+  a missing material library, missing generated textures, or bones without skinning;
+  `craft_hits` / `craft_missing` in `--json`; a `4/4` note for 3D files.
+- Eight new unit tests covering the craft gate, inline-engine loader handling and the size
+  budget. The ship gate is documented in all four READMEs.
+
+### Changed
+
+- Core rule 1 now makes an inline minified 3D engine the **default** for 3D, not a last
+  resort: "zero external assets" means zero runtime requests, not zero library code.
+- Size budget: warning 500 KB → 1800 KB, hard limit 1200 KB → 2560 KB, so a ~1.4 MB inline
+  engine plus a generated asset layer is not penalised.
+- `fetch()` on inline-engine loader lines (`THREE.FileLoader` / `ImageBitmapLoader`) is
+  reported as library code; a `fetch()` in game code still fails the offline rule.
+- Plugin and marketplace versions bumped to 1.2.0.
+
 ## [1.1.0] — 2026-11-12
 
 The 3D path was rebuilt around a real render pipeline. The previous shell was correct and

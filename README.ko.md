@@ -81,6 +81,7 @@ python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
 
 # 2. GAME 블록을 교체하고 감사 실행
 python scripts/check_single_file.py orb-runner.html --strict
+python scripts/check_single_file.py night-shift.html --strict --craft   # 3D
 
 # 3. 열기 — 더블클릭 또는:
 open orb-runner.html        # macOS
@@ -121,6 +122,7 @@ single-file-game/
 │   ├── procedural-art-2d.md    시드 팔레트, 도형 기본기, 타일 굽기, 이펙트
 │   ├── procedural-3d.md        WebGL2 구성, 생성 텍스처, 그레이딩, 화질 단계
 │   ├── cinematic-look.md       렌더 스택: 태양, 하늘, 그림자, 볼류메트릭, Bloom, 그레이드
+│   ├── asset-craft.md          3D 필수 게이트: 베벨, 재질 라이브러리, 생성 텍스처, 스키닝
 │   ├── material-authoring.md   PBR 채널, 마모, 이음새, 트라이플래너, 물, 베이크
 │   ├── game-feel.md            히트스톱, 흔들림, 이징, 파티클, 오디오 레이어, HUD 모션
 │   ├── procedural-audio.md     SFX 버스, 노이즈, 스텝 시퀀서 음악, 믹싱
@@ -150,7 +152,7 @@ single-file-game/
    노출을 만지기 전에 sRGB 인코딩을 확인한다.
 5. **콘텐츠는 데이터로.** 손으로 쓴 인스턴스가 아니라 표와 시드 생성기.
 6. **손맛은 의도적으로 설계한다.** 흔들림, 파티클, 팝, 클릭음, 대기 모션 — 모두 저렴하고 모두 점검 항목.
-7. **감사하고 넘긴다.** `check_single_file.py --strict`, 이어서 릴리스 체크리스트.
+7. **감사하고 넘긴다.** `check_single_file.py --strict`(3D는 `--craft` 추가), 이어서 릴리스 체크리스트.
 
 근거는 [`docs/method.md`](docs/method.md), 실무 디테일은 [`SKILL.md`](SKILL.md)에 있습니다.
 
@@ -160,6 +162,7 @@ single-file-game/
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | 템플릿을 복사하고 제목·부팅 표기·저장 네임스페이스·강조색을 설정 |
 | `python scripts/check_single_file.py X.html --strict` | 원격 리소스, 네트워크 호출, 빠진 껍데기, 존재하지 않는 요소 ID, 과대 용량이면 실패 |
+| `python scripts/check_single_file.py X.html --strict --craft` | 3D 출하 게이트: 형상 가공·재질 라이브러리·생성 텍스처·스키닝 누락 시 실패 |
 | `python -m unittest discover -s tests -v` | 감사기와 스캐폴드를 정상/비정상 파일로 검증 |
 
 도구 모음의 핵심은 감사기입니다. 이 형식이 저지르기 쉬운 실수를 정확히 겨냥합니다. "일단" 추가한

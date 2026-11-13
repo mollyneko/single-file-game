@@ -7,14 +7,21 @@ to happen.
 
 ```bash
 python scripts/check_single_file.py path/to/game.html --strict
+python scripts/check_single_file.py path/to/game.html --strict --craft   # 3D deliverable
 ```
+
+`--craft` is **mandatory** for a shipped 3D game: it fails on missing geometry craft, a
+missing named material library, missing generated textures, or bones without skinning.
+Starters and in-progress scaffolds are exempt. See `references/asset-craft.md`.
 
 Manual confirmation of what the script cannot see:
 
 - [ ] Opens by double-clicking from a folder with spaces in its name.
 - [ ] Works with the network disabled (DevTools → Network → Offline).
 - [ ] No `<script src>`, `<link href>`, `fetch`, `XMLHttpRequest`, `import`, `@font-face` URL.
-- [ ] File size is justified: < 300 KB for 2D, < 900 KB for 3D, larger only with a stated reason.
+      (An inline engine's own `THREE.FileLoader` / `ImageBitmapLoader` fetch text is fine.)
+- [ ] File size is justified: < 300 KB for 2D, < 900 KB for hand-written 3D, < 2.5 MB with
+      an inline engine; anything larger needs a stated reason in the handoff.
 - [ ] `view-source` shows one `<style>` and one `<script>` (plus optional JSON blobs).
 
 ## 2. Boot and shell
@@ -88,6 +95,21 @@ Manual confirmation of what the script cannot see:
 - [ ] File name is stable and versioned: `game-name_v1.html`.
 - [ ] Open the file on a second machine, ideally another OS.
 - [ ] Report back: path, size, what was verified, known limits, next step.
+
+## 11. Asset craft (3D deliverables only)
+
+Starters are exempt; a deliverable is not. Confirm each one on screen, not just in code:
+
+- [ ] An inline minified 3D engine is present (PBR, IBL, shadows, skinning, curve geometry) —
+      or the hand-written renderer is smaller than the asset layer.
+- [ ] No box, sphere or capsule is used directly as a finished asset.
+- [ ] Hard surfaces are beveled; generated geometry recomputes normals; lathe seams are welded.
+- [ ] ≥ 12 named materials with albedo + roughness + metalness, looked up by name.
+- [ ] Wear, seams and decals are generated at runtime (Canvas / DataTexture / shader noise).
+- [ ] Animated characters are one continuous skinned mesh, not one primitive per bone.
+- [ ] Object spec tables plus a seeded builder; `Math.random()` never decides a silhouette.
+- [ ] A material calibration row (roughness sweep × metalness 0/1) was inspected in frame.
+- [ ] `--strict --craft` reports `3D asset-craft signals: 4/4`.
 
 ## Red flags that mean "not done"
 

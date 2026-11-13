@@ -87,6 +87,7 @@ python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
 
 # 2. replace the GAME block, then audit the result
 python scripts/check_single_file.py orb-runner.html --strict
+python scripts/check_single_file.py night-shift.html --strict --craft   # 3D
 
 # 3. open it — double-click, or:
 open orb-runner.html        # macOS
@@ -127,6 +128,7 @@ single-file-game/
 │   ├── procedural-art-2d.md    seeded palettes, shape primitives, tile baking, effects
 │   ├── procedural-3d.md        WebGL2 setup, generated textures, grade, quality tiers
 │   ├── cinematic-look.md       the render stack: sun, sky, shadows, volumetrics, bloom, grade
+│   ├── asset-craft.md          the 3D hard gate: bevel, material library, generated maps, skinning
 │   ├── material-authoring.md   PBR channels, wear, seams, triplanar, water, baking
 │   ├── game-feel.md            hitstop, shake, easing, particles, audio layering, HUD motion
 │   ├── procedural-audio.md     SFX bus, noise, step-sequenced music, mixing
@@ -156,7 +158,7 @@ single-file-game/
    then the post chain. Check the sRGB encode before touching exposure.
 5. **Content as data.** Tables plus a seeded generator, not hand-authored instances.
 6. **Feel on purpose.** Shake, particles, pops, ticks, idle motion — all cheap, all checked.
-7. **Audit.** `check_single_file.py --strict`, then walk the release checklist.
+7. **Audit.** `check_single_file.py --strict`, plus `--craft` for 3D, then walk the release checklist.
 
 Full reasoning in [`docs/method.md`](docs/method.md); operational detail in
 [`SKILL.md`](SKILL.md).
@@ -167,6 +169,7 @@ Full reasoning in [`docs/method.md`](docs/method.md); operational detail in
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | Copies a template, sets the title, boot mark, save namespace and accent colour |
 | `python scripts/check_single_file.py X.html --strict` | Fails on remote resources, network calls, missing shell parts, dangling element IDs, oversized files |
+| `python scripts/check_single_file.py X.html --strict --craft` | 3D ship gate: fails on missing geometry craft, material library, generated textures or skinning |
 | `python -m unittest discover -s tests -v` | Tests the auditor and the scaffolder against known-good and known-bad files |
 
 The auditor is the point of the toolchain. It catches the mistakes that this format makes

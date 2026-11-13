@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Audit a single-file HTML game against the format rules.
+"""Audit a single-file HTML game against the format rules and the 3D asset-craft gate.
 
 Checks the things that actually break this format: remote resources, missing shell parts,
-dangling element IDs and runaway file size.
+dangling element IDs and runaway file size. With --craft it also enforces the 3D hard gate
+(bevel/curved geometry, a named material library, generated textures, continuous skinning).
 
     python check_single_file.py game.html
     python check_single_file.py game.html --strict
+    python check_single_file.py game3d.html --strict --craft   # 3D ship gate
     python check_single_file.py assets/*.html --json
 
 Exit codes: 0 = pass, 1 = failure (or any warning with --strict).
@@ -46,6 +48,9 @@ ID_REF = [
 ]
 
 INLINE_HANDLER = re.compile(r"<[^>]+\son[a-z]+\s*=\s*[\"']", re.IGNORECASE)
+# Inline 3D engines ship loader classes that call fetch(). That is library code,
+# not a runtime request made by the game — see references/asset-craft.md.
+INLINE_LOADER_CTX = re.compile(r"THREE\.|FileLoader|ImageBitmapLoader|\bLoader\b", re.IGNORECASE)
 
 ERROR_BOUNDARY = [
     re.compile(r"addEventListener\s*\(\s*['\"]error['\"]"),
@@ -55,6 +60,61 @@ ERROR_BOUNDARY = [
 
 REDUCED_MOTION = re.compile(r"prefers-reduced-motion")
 
+# --- 3D asset-craft gate -------------------------------------------------
+# The gate cannot judge beauty; it proves the asset work was attempted. A 3D
+# deliverable must show all four groups. See references/asset-craft.md.
+IS_3D = re.compile(
+    r"getContext\(\s*['\"]webgl2|WebGL2RenderingContext|WebGLRenderer|"
+    r"createShader|compileShader|\bTHREE\.",
+    re.IGNORECASE,
+)
+BONE_SIGNAL = re.compile(
+    r"BONE_DEFS|\bbones\b|\bSkeleton\b|computePose|poseEntity|\bskinning\b|\bboneIndex\b",
+    re.IGNORECASE,
+)
+GEOMETRY_SIGNALS = [
+    re.compile(r"\bbevel\b", re.IGNORECASE),
+    re.compile(r"LatheGeometry|TubeGeometry|ExtrudeGeometry|CatmullRom|\brevolve\b", re.IGNORECASE),
+    re.compile(r"computeVertexNormals", re.IGNORECASE),
+    re.compile(r"\bdisplace(?:ment)?\b|\bprofilePoints\b|\blathe\b", re.IGNORECASE),
+]
+MATERIAL_TABLE_SIGNALS = [
+    re.compile(r"mats\.get\(|\.mat\(\s*['\"]"),
+    re.compile(r"\bMATERIALS\b|material(?:s|Lib|Table)\s*[:=]", re.IGNORECASE),
+    re.compile(r"new\s+Mesh(?:Standard|Physical)Material"),
+    re.compile(r"materialLibrary|materialTable", re.IGNORECASE),
+]
+TEXTURE_SIGNALS = [
+    re.compile(r"DataTexture|CanvasTexture|createImageData|texImage2D", re.IGNORECASE),
+    re.compile(r"createElement\(\s*['\"]canvas['\"]\s*\)", re.IGNORECASE),
+    re.compile(r"getContext\(\s*['\"]2d['\"]\s*\)", re.IGNORECASE),
+    re.compile(r"\bnoiseTex\b|bakeTexture|makeTexture", re.IGNORECASE),
+]
+SKINNING_SIGNALS = [
+    re.compile(r"SkinnedMesh|new\s+Skeleton\s*\(|skinIndex|skinWeight", re.IGNORECASE),
+    re.compile(r"skinning_vertex|skinnormal_vertex|boneWeights|bindMatrix", re.IGNORECASE),
+]
+
+
+def craft_check(text: str) -> tuple[list[str], list[str], bool]:
+    """Return (hit groups, missing groups, whether skinning was required)."""
+    groups: dict[str, bool] = {
+        "geometry craft": any(p.search(text) for p in GEOMETRY_SIGNALS),
+        "material library": (
+            re.search(r"roughness", text, re.IGNORECASE) is not None
+            and re.search(r"metalness", text, re.IGNORECASE) is not None
+            and any(p.search(text) for p in MATERIAL_TABLE_SIGNALS)
+        ),
+        "generated textures": any(p.search(text) for p in TEXTURE_SIGNALS),
+        "continuous skinning": True,
+    }
+    needs_skin = BONE_SIGNAL.search(text) is not None
+    if needs_skin:
+        groups["continuous skinning"] = any(p.search(text) for p in SKINNING_SIGNALS)
+    hits = [k for k, v in groups.items() if v]
+    missing = [k for k, v in groups.items() if not v]
+    return hits, missing, needs_skin
+
 
 @dataclass
 class Report:
@@ -63,6 +123,8 @@ class Report:
     failures: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    craft_hits: list[str] = field(default_factory=list)
+    craft_missing: list[str] = field(default_factory=list)
 
     def fail(self, msg: str) -> None:
         self.failures.append(msg)
@@ -85,10 +147,12 @@ class Report:
             "failures": self.failures,
             "warnings": self.warnings,
             "notes": self.notes,
+            "craft_hits": self.craft_hits,
+            "craft_missing": self.craft_missing,
         }
 
 
-def audit(path: Path, warn_kb: float, fail_kb: float) -> Report:
+def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Report:
     r = Report(path=path)
     raw = path.read_bytes()
     r.size_kb = len(raw) / 1024
@@ -105,6 +169,21 @@ def audit(path: Path, warn_kb: float, fail_kb: float) -> Report:
     if CSS_URL.search(head):
         r.fail("remote url(...) in CSS (fonts, images)")
     for pattern, label in NETWORK_CALLS:
+        if label == "fetch()":
+            hits = list(pattern.finditer(text))
+            game_hits = []
+            for m in hits:
+                ls = text.rfind("\n", 0, m.start()) + 1
+                le = text.find("\n", m.end())
+                line_text = text[ls:le if le >= 0 else len(text)]
+                if not INLINE_LOADER_CTX.search(line_text):
+                    game_hits.append(m)
+            if game_hits:
+                line = text[: game_hits[0].start()].count("\n") + 1
+                r.fail(f"fetch() found at line {line} — the file must work offline")
+            elif hits:
+                r.note(f"{len(hits)} fetch() call(s) are inline-engine loader code, not game requests")
+            continue
         m = pattern.search(text)
         if m:
             line = text[: m.start()].count("\n") + 1
@@ -156,6 +235,19 @@ def audit(path: Path, warn_kb: float, fail_kb: float) -> Report:
     else:
         r.note(f"file is {r.size_kb:.0f} KB")
 
+    # --- 3D asset craft ---------------------------------------------------
+    if IS_3D.search(text):
+        hits, missing, needs_skin = craft_check(text)
+        r.craft_hits, r.craft_missing = hits, missing
+        r.note(f"3D asset-craft signals: {len(hits)}/4" + (f" (skinning required: {needs_skin})" if needs_skin else ""))
+        if craft:
+            for group in missing:
+                r.fail(f"3D craft gate: {group} missing — see references/asset-craft.md")
+        elif missing:
+            r.note("3D craft gate not enforced; ship with --strict --craft")
+    elif craft:
+        r.note("not detected as 3D — craft gate skipped")
+
     # --- informational ---------------------------------------------------
     canvases = len(re.findall(r"<canvas[\s>]", text, re.IGNORECASE))
     r.note(f"{canvases} canvas element(s), {len(declared)} element ids")
@@ -180,9 +272,15 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Audit single-file HTML games.")
     ap.add_argument("paths", nargs="+", type=Path)
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
+    ap.add_argument(
+        "--craft", action="store_true",
+        help="enforce the 3D asset-craft hard gate (mandatory for a shipped 3D game)",
+    )
     ap.add_argument("--json", action="store_true", help="machine-readable output")
-    ap.add_argument("--warn-kb", type=float, default=500.0)
-    ap.add_argument("--fail-kb", type=float, default=1200.0)
+    # A minified inline 3D engine (~800 KB) plus a generated asset layer is
+    # legitimately 1-2 MB; do not warn away the budget this gate requires.
+    ap.add_argument("--warn-kb", type=float, default=1800.0)
+    ap.add_argument("--fail-kb", type=float, default=2560.0)
     args = ap.parse_args(argv)
 
     reports = []
@@ -190,7 +288,7 @@ def main(argv: list[str]) -> int:
         if not p.exists():
             reports.append(Report(path=p, failures=["file not found"]))
             continue
-        reports.append(audit(p, args.warn_kb, args.fail_kb))
+        reports.append(audit(p, args.warn_kb, args.fail_kb, craft=args.craft))
 
     if args.json:
         print(json.dumps([r.as_dict() for r in reports], indent=2))
