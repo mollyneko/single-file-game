@@ -1,5 +1,11 @@
 # Asset craft — the 3D hard gate
 
+> **Primary route.** Modeling runs through the vendored img2threejs pipeline
+> (`img2threejs/PIPELINE.md`), whose strict-quality spec gate and staged reviews produce the
+> geometry and material craft described here, on an inlined three.js build (`SKILL.md` §0).
+> This file remains as the rationale for the `--craft` signals and as the backstop for files
+> built outside the pipeline.
+
 A single file is a **format**, not a visual ceiling. Two single-file 3D games were torn apart to
 find out why one reads as a shipped title and the other as a coloured prototype. The answer was
 not a better shader. It was where the bytes went.

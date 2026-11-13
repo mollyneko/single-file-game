@@ -38,7 +38,7 @@
 **空間・光・マテリアル・反射・世界の細部・予算。** カメラはシーンの内側にあり、太陽は 1 つで影は
 本物、マテリアルには摩耗と継ぎ目があり、反射は地平線と一致し、表面には誰も読まない情報が載り、
 バイトはエンジンの再実装ではなくアセットに使われる。6 つのうち 3 つを落とせば、機能リストがどれ
-だけ長くてもそれは試作です。各軸の下限・数値・それが防ぐ失敗は
+だけ長くてもそれは試作です。各軸の合格ラインと数値、そして守らなかったときに起きる失敗は
 [`SKILL.md`](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes) にあります。
 
 ## 単一ファイルは「試作画質」の言い訳ではない
@@ -53,9 +53,11 @@
 ```
 
 > テンプレートはあえてレンダラーを手書きしています。75 KB で全パスが一度に見える代わりに、
-> クラフトゲートは `2/4` です。出荷する 3D ゲームはこの予算の使い方をすべきではありません。
-> エンジンをインラインし、バイトはアセットに回してください
-> ([`references/asset-craft.md`](references/asset-craft.md))。
+> クラフトゲートは `2/4` です。これは参照スライスであり、モデリングの道ではありません。
+> 出荷する 3D ゲームは **three.js のインライン必須**、**全モデルを同梱の
+> [img2threejs](https://github.com/img2threejs/img2threejs) パイプラインで生成すること必須**
+> （`img2threejs/PIPELINE.md`）。参照画像を入れると、リグ付き `THREE.Group` ファクトリが
+> 出てきます。どちらの規則も監査対象です。
 
 得られるもの:
 
@@ -107,7 +109,7 @@ xdg-open orb-runner.html    # Linux
 
 `--mode 3d` で WebGL2 版になります。どちらのテンプレートも完成した「殻」です。デザイントークン、
 起動画面、タイトル、HUD、ポーズとリザルトのカード、入力レイヤ、オーディオバス、セーブバス、
-エラー境界、適応画質、そしてあなたのルールを書くための区切られたブロックが入っています。
+エラー境界、適応画質、そして自分のルールを書き込む専用ブロックまで揃っています。
 
 ## スキルとして導入
 
@@ -136,9 +138,9 @@ single-file-game/
 ├── references/
 │   ├── architecture.md         ファイル構成、シーン機構、ループ契約、リサイズと DPR
 │   ├── procedural-art-2d.md    シード付きパレット、図形プリミティブ、タイル焼き込み、演出
-│   ├── procedural-3d.md        WebGL2 構築、生成テクスチャ、グレーディング、画質ティア
+│   ├── procedural-3d.md        three.js インライン、生成テクスチャ、グレーディング、画質ティア
 │   ├── cinematic-look.md       レンダースタック：太陽、空、影、ボリューメトリック、Bloom、グレード
-│   ├── asset-craft.md          3D の必須要件：ベベル、材質ライブラリ、生成テクスチャ、スキニング
+│   ├── asset-craft.md          クラフトゲートの根拠：ティアダウン証拠、--craft 信号群
 │   ├── material-authoring.md   PBR チャンネル、摩耗、継ぎ目、トライプラナー、水面、ベイク
 │   ├── game-feel.md            ヒットストップ、揺れ、イージング、粒子、音の重ね、HUD モーション
 │   ├── procedural-audio.md     SFX バス、ノイズ、ステップシーケンス音楽、ミックス
@@ -147,15 +149,20 @@ single-file-game/
 │   ├── performance.md          フレーム予算、焼き込み、プーリング、適応画質
 │   ├── resilience-and-a11y.md  エラー境界、段階的縮退、視差効果の低減
 │   ├── design-language.md      トークン、文字サイズ、ボタン、HUD 構成
+│   ├── visual-self-review.md   撮影 → 採点 → 修正 → 再撮影のループ、リグのチェック表
 │   └── release-checklist.md    出荷前チェックリスト
+├── img2threejs/                同梱モデリングパイプライン（Apache-2.0）：参照画像 →
+│   │                           リグ付き THREE.Group ファクトリ。入口は PIPELINE.md
+│   └── …                      forge/ の各ステージ、grimoire/ の規則、docs/、専用 LICENSE
 ├── assets/
 │   ├── starter-2d.html         実行可能な Canvas ゲームの殻
-│   └── starter-3d.html         実行可能な WebGL2 ゲームの殻
+│   └── starter-3d.html         生 WebGL2 ポストチェーン参照スライス（殻であり、道ではない）
 ├── scripts/
 │   ├── scaffold.py             テンプレートから名前付きゲームを生成
 │   └── check_single_file.py    規約に照らしてファイルを監査
 ├── docs/
 │   └── method.md               なぜこの制約なのか、いつ使うべきでないか
+├── THIRD_PARTY.md              同梱パイプラインの出所とライセンス
 └── tests/                      2 つのツールの単体テスト
 ```
 
@@ -168,7 +175,9 @@ single-file-game/
    露出を触る前に sRGB エンコードを確認する。
 5. **コンテンツはデータとして。** 手書きの実例ではなく、表とシード付き生成器。
 6. **手触りは意図的に設計する。** 揺れ、粒子、ポップ、クリック音、待機モーション——安価で、すべて点検項目。
-7. **監査して出す。** `check_single_file.py --strict`（3D は `--craft` も）、その後にリリースチェックリスト。
+7. **自分で見て、直して、撮り直して、監査する。** キャラの拡大アップを含め実スクリーンショットを
+   2 ラウンド以上撮り、9 軸を書いて採点。そのうえで `check_single_file.py --strict --craft`
+   （アセット工芸 **と** 3 つのハード制約）とリリースチェックリストを通す。
 
 論拠は [`docs/method.md`](docs/method.md)、実務的な詳細は [`SKILL.md`](SKILL.md) にあります。
 
@@ -178,7 +187,7 @@ single-file-game/
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | テンプレートを複製し、タイトル・起動表示・保存名前空間・アクセント色を設定 |
 | `python scripts/check_single_file.py X.html --strict` | リモート参照、通信呼び出し、欠けた殻、存在しない要素 ID、過大なサイズで失敗させる |
-| `python scripts/check_single_file.py X.html --strict --craft` | 3D の出荷ゲート：形状加工・材質ライブラリ・生成テクスチャ・スキニングの欠落で失敗 |
+| `python scripts/check_single_file.py X.html --strict --craft` | 3D の出荷ゲート：形状加工・材質ライブラリ・生成テクスチャ・スキニングの欠落、**および** SSAO・深度認識ボリューメトリック・フリールック・`SELF-REVIEW` 記録の欠落で失敗（各ゲート `4/4`） |
 | `python -m unittest discover -s tests -v` | 監査器とスキャフォールドを良品／不良品で検証 |
 
 このツール群の主役は監査器です。この形式が犯しがちなミスを狙い撃ちします。「とりあえず」足した
@@ -200,6 +209,10 @@ FAIL  game.html  (1284.6 KB)
 
 プロトタイプ、デモ、ゲームジャム、教材、社内ツール、小さなプロダクトでは、1 ファイルは妥協では
 ありません。アイデアからプレイヤーまでの最短経路です。
+
+## 謝辞
+
+3D モデルはすべて同梱の [img2threejs](https://github.com/img2threejs/img2threejs)（Apache-2.0、[`THIRD_PARTY.md`](THIRD_PARTY.md) 参照）が組み立ててくれるもので、作者に感謝します。
 
 ## ライセンス
 

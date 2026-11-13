@@ -7,8 +7,9 @@ to happen.
 
 - [ ] The build is **3D** — or, if it is 2D, the request asked for it or a one-line reason is
       written down (a perspective camera would not improve the loop).
-- [ ] 2D was not chosen because 3D was hard, and an inline engine was not rejected to keep the
-      file small.
+- [ ] 2D was not chosen because 3D was hard, three.js was not rejected to keep the file small,
+      and no model was hand-assembled from primitives instead of using the img2threejs
+      pipeline (`SKILL.md` §0).
 - [ ] The six axes in `SKILL.md` §1 were scored explicitly, and at most one is below its floor.
 - [ ] The three hard constraints in `SKILL.md` §2A are declared: SSAO **and** depth-aware
       volumetrics in the shipped pipeline, free-look mouse by default (or
@@ -42,8 +43,10 @@ Manual confirmation of what the script cannot see:
 - [ ] Works with the network disabled (DevTools → Network → Offline).
 - [ ] No `<script src>`, `<link href>`, `fetch`, `XMLHttpRequest`, `import`, `@font-face` URL.
       (An inline engine's own `THREE.FileLoader` / `ImageBitmapLoader` fetch text is fine.)
-- [ ] File size is justified: < 300 KB for 2D, < 900 KB for hand-written 3D, < 2.5 MB with
-      an inline engine; anything larger needs a stated reason in the handoff.
+- [ ] A 3D deliverable carries the **inlined three.js build** (`window.THREE`, version noted in
+      a header comment). A 3D file without `THREE` markers fails the audit.
+- [ ] File size is justified: < 300 KB for 2D, < 2.5 MB for 3D with an inline three.js build;
+      anything larger needs a stated reason in the handoff.
 - [ ] `view-source` shows one `<style>` and one `<script>` (plus optional JSON blobs).
 
 ## 2. Boot and shell
@@ -124,10 +127,15 @@ Manual confirmation of what the script cannot see:
 
 ## 11. Asset craft (3D deliverables only)
 
-Starters are exempt; a deliverable is not. Confirm each one on screen, not just in code:
+Starters and in-progress scaffolds are exempt; a deliverable is not. Modeling runs through the
+vendored img2threejs pipeline (`img2threejs/PIPELINE.md`) — its strict-quality spec gate and
+staged reviews produce the geometry and material craft below. Confirm each item on screen,
+not just in code:
 
-- [ ] An inline minified 3D engine is present (PBR, IBL, shadows, skinning, curve geometry) —
-      or the hand-written renderer is smaller than the asset layer.
+- [ ] An inline minified **three.js** build is present (`window.THREE`), not a hand-written
+      renderer.
+- [ ] Models were produced by the img2threejs pipeline: a sculpt spec plus a
+      `createObjectModel` factory, with the spec seed recorded beside the world seed.
 - [ ] No box, sphere or capsule is used directly as a finished asset.
 - [ ] Hard surfaces are beveled; generated geometry recomputes normals; lathe seams are welded.
 - [ ] ≥ 12 named materials with albedo + roughness + metalness, looked up by name.

@@ -27,9 +27,10 @@ files, broken CDNs, build drift, and privacy questions.
 
 Be honest about the trade:
 
-- **Byte budget.** Procedural content is compact but not free: a hand-written 3D scene lands at
-  40–120 KB of source, a 2D arcade game at 15–40 KB, and a 3D game with an inline engine at
-  0.8–1.4 MB — of which almost nothing is yours. That is a feature.
+- **Byte budget.** Procedural content is compact but not free: a 2D arcade game lands at
+  15–40 KB, and a 3D game with the mandatory inlined three.js build at 0.6–1.4 MB — of which
+  almost nothing is yours. That is a feature; the models themselves come from the vendored
+  img2threejs pipeline as code, not as downloaded meshes.
 - **No artist pipeline.** Style must come from a system — palette, outline, one light
   direction — not from hand-painted assets. See [design-language](../references/design-language.md).
 - **Single thread.** No workers by default (they need a same-origin URL, which `file://`

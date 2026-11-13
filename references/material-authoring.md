@@ -1,5 +1,10 @@
 # Procedural material authoring
 
+> **Primary route.** Materials are now authored inside the img2threejs pipeline's material and
+> surface stages (`img2threejs/PIPELINE.md`), which enforce the five-channel model below. Read
+> this file as the theory those stages implement — and as the standard for surfaces built
+> outside the pipeline.
+
 A box with one albedo value reads as a box. A box with a height field, a wear mask, a
 roughness gradient and a seam grid reads as a built object. The gap is not texture memory —
 it is four layers and about sixty lines of shader.

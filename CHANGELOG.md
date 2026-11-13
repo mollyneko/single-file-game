@@ -4,6 +4,43 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] — 2026-11-13
+
+The engine question is settled by mandate, and the modeling question is settled by pipeline.
+Every 3D deliverable **must inline three.js**, and **every model must be produced by the
+img2threejs pipeline**, now vendored in full at `img2threejs/` (Apache-2.0, upstream commit
+`0c0c49b`). The raw-WebGL2 escape hatch is gone; the craft gate's "starters exempt" promise is
+finally implemented in the auditor instead of only in prose.
+
+### Added
+
+- `img2threejs/` — the complete upstream repository (5.6 MB, 370 files), vendored unchanged
+  except that its `SKILL.md` is stored as `PIPELINE.md` so skill hosts scanning this directory
+  do not register a second standalone skill. Provenance and license terms in `THIRD_PARTY.md`.
+- `THIRD_PARTY.md` — Apache-2.0 applies to `img2threejs/`; MIT continues to cover the rest.
+- `SKILL.md` §0: two hard constraints — inlined three.js (`window.THREE`) in every 3D
+  deliverable, and modeling exclusively through the img2threejs pipeline (reference image →
+  staged, quality-gated sculpt → `createObjectModel` factory). Workflow gains Step 3, "Build
+  the models with img2threejs", including the TS→JS / module-imports→global-`THREE` adaptation.
+- `check_single_file.py`: a 3D deliverable with no `THREE` markers now fails `--craft`;
+  scaffold shells (a kept `GAME (replace this block)` marker) are reported as shells and the
+  3D gates describe rather than fail — the documented exemption now exists in code.
+
+### Changed
+
+- `references/procedural-3d.md` rewritten around the single path: inline three.js; the raw
+  `getContext`/program-compile boilerplate replaced by `THREE.WebGLRenderer` boot and
+  `debug.onShaderError`.
+- `references/asset-craft.md` and `references/material-authoring.md` repositioned as the
+  rationale and theory behind the pipeline's own gates, not a parallel craft doctrine.
+- The 3D starter is relabelled everywhere as a post-chain reference slice (a shell), never a
+  starting point for a deliverable; all four READMEs updated accordingly.
+
+### Removed
+
+- The raw-WebGL2 route ("hand-writing a renderer is justified once the asset layer is
+  complete") and every sentence that treated an inline engine as optional.
+
 ## [1.4.0] — 2026-11-13
 
 Three constraints that were previously "good practice" are now hard gates. A shipped 3D game

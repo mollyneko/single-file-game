@@ -1,6 +1,6 @@
 ---
 name: single-file-game
-description: Build a complete, playable browser game as one self-contained HTML file with zero external assets, where art, audio, maps and 3D content are generated procedurally at runtime. Defaults to 3D at AAA fidelity — perspective camera, inline WebGL engine, PBR materials, shadows, height fog, reflections — and drops to 2D only when the request asks for it. Use when asked to make a game, prototype, jam entry, demo or interactive toy that must run by double-clicking a single file, work offline, or ship without build tools, CDNs or an asset pipeline.
+description: Build a complete, playable browser game as one self-contained HTML file with zero external assets, where art, audio, maps and 3D content are generated procedurally at runtime. Defaults to 3D at AAA fidelity: a minified three.js build is always inlined, and every 3D model is produced by the vendored img2threejs pipeline (reference image to quality-gated procedural THREE.Group factory) — never hand-assembled primitives. Perspective camera, PBR materials, shadows, SSAO, depth-aware volumetrics, height fog, free-look mouse. Drops to 2D only when the request asks for it. Use when asked to make a game, prototype, jam entry, demo or interactive toy that must run by double-clicking a single file, work offline, or ship without build tools, CDNs or an asset pipeline.
 license: MIT
 ---
 
@@ -18,15 +18,26 @@ byte cost; offline by default means it runs on a plane, in a classroom, on a USB
 "make something like Genshin / a shooter / a driving game" are 3D briefs. A single-file 3D game
 with an inline engine is the normal output of this skill, not the ambitious variant of it.
 
-- **Inline an engine and use it.** 0.8–1.4 MB of minified WebGL library inside the `<script>` is
-  expected and free of charge: it is still one file, and it buys PBR, IBL, shadow maps, skinning
-  and curve geometry. Hand-writing a renderer is justified only when the asset layer is already
-  complete — if the render pipeline is larger than the asset layer, the budget is inverted.
+- **Inline three.js — mandatory, not a preference.** Every 3D file produced by this skill pastes
+  a minified three.js build (global `window.THREE`, MIT) inside the `<script>`: 0.6–1.4 MB is
+  expected and free of charge, and it buys PBR, IBL, shadow maps, skinning and curve geometry.
+  Hand-written WebGL renderers are **not permitted in deliverables**; the bundled
+  `assets/starter-3d.html` is a raw-WebGL2 shell kept only as a post-chain reference. The
+  auditor fails a 3D deliverable that carries no `THREE` markers.
+- **Every model comes from the img2threejs pipeline.** This skill vendors
+  [img2threejs](https://github.com/img2threejs/img2threejs) (Apache-2.0) at `img2threejs/`,
+  entry `img2threejs/PIPELINE.md`. Modeling is: reference image → staged sculpt
+  (blockout → structural → form → material → surface → lighting → interaction → optimization),
+  each stage visually reviewed before the next unlocks → a quality-gated `createObjectModel`
+  factory emitting a rigged, animation-ready `THREE.Group` with named materials. Hand-assembling
+  boxes and capsules into characters, or any ad-hoc primitive stack, is not modeling and fails
+  the audit. The pipeline's own gates (strict-quality spec, per-pass review) are this skill's
+  geometry and material craft gate.
 - **2D is opt-in.** Choose it only when the request names it (2D, top-down, pixel, platformer,
   card, board, text, puzzle, "like Vampire Survivors") or when the loop genuinely loses clarity in
   perspective. Then write the reason in one line before the first draw call.
 - **"One file" never justifies** a fixed top-down zoom, flat ambient light, untextured boxes, a
-  hand-written renderer instead of an inline engine, or 2D because 3D is harder. Those five are
+  hand-written renderer (§0: three.js is mandatory), or 2D because 3D is harder. Those five are
   how this skill gets ignored.
 - **AAA here means a frame that survives inspection plus a loop that closes**, not content
   volume. A 200 KB file can read as AAA; a 3 MB file of half-built features cannot. When time is
@@ -66,7 +77,8 @@ level feel like a location. Axes 2–4 are what make objects look like matter in
 Non-negotiable. Violating one breaks the format.
 
 1. **One file.** All CSS in one `<style>`, all JS in one `<script>` IIFE. No `<link href>`, no
-   `<script src>`, no `fetch`, no `import`, no web fonts. An inline minified engine is intended.
+   `<script src>`, no `fetch`, no `import`, no web fonts. An inline minified three.js build is
+   intended — and mandatory in every 3D deliverable (§0).
 2. **Zero network at runtime.** Works with the network disabled. No telemetry, no analytics.
 3. **Art and audio are generated.** Canvas, SVG, CSS gradients or shader-generated textures;
    WebAudio oscillators plus one shared noise buffer. Bake expensive art once into an offscreen
@@ -149,23 +161,17 @@ Four gates. The last two are the ones people skip, and they are the ones being j
 | **Hard constraints** (3D) | same `--strict --craft` run, plus screenshot evidence | missing SSAO, missing depth-aware volumetrics, drag-gated mouse look, no recorded self-review |
 | **Frame** | score §1's six axes **and** §2A's three review axes, then walk `references/release-checklist.md` | a frame that reads as a prototype, a disconnected limb, or a camera that needs a drag |
 
-The craft gate in six lines, for 3D deliverables (starters exempt; a shipped file is not). The
-bundled `assets/starter-3d.html` reports `2/4` — it is a shell, and its asset layer is your first
-task:
+The craft gate for a 3D deliverable is two sentences:
 
-1. Inline engine, not a reimplementation.
-2. No bare primitive is a finished asset — every visible object passes through a bevel, a curved
-   surface (lathe / tube / extrude / spline), per-vertex displacement, or a generated texture.
-3. Bevel hard edges ≥0.02 world units, recompute normals after generating geometry, weld lathe
-   seam-ring normals.
-4. ≥12 named materials with generated maps, looked up by name — not raw colours passed to a draw
-   call. Ship a roughness × metalness calibration row and look at it before tuning exposure.
-5. Animated characters are one weighted skinned mesh, never one primitive per bone.
-6. Seeded, table-driven builders: object specs in a table, a builder with a named seed RNG and a
-   transform stack.
-
-`references/asset-craft.md` holds the evidence, the `--craft` signal groups and the catch-up
-order.
+1. **three.js is inlined and the models are not hand-made.** A deliverable carries a minified
+   three.js build (`window.THREE`) and its models were produced by the img2threejs pipeline —
+   a sculpt spec plus a `createObjectModel` factory, with the spec seed recorded so the world
+   reproduces. The auditor fails a 3D deliverable with no `THREE` markers; scaffold shells (a
+   kept `GAME (replace this block)` marker) are reported as shells rather than failed.
+2. **The pipeline's own quality gates were run.** Strict-quality spec validation before any
+   code, plus the staged visual review passes, are what "geometry craft" and "material
+   library" mean here. `references/asset-craft.md` keeps the teardown evidence and the
+   auditor's signal groups as a backstop for files built outside the pipeline.
 
 The same `--craft` run also enforces §2A. It reports `3D hard constraints: n/4` — SSAO,
 depth-aware volumetrics, free-look mouse, and a `SELF-REVIEW` record with ≥2 rounds. The
@@ -194,7 +200,31 @@ The scaffold already contains the shell (`references/architecture.md`): design t
 screen, title layer, canvas, HUD, pause and game-over cards, input layer, audio bus, save bus,
 error boundary, adaptive quality, and a marked `GAME` block. Keep the shell, replace the rules.
 
-### Step 3 — Systems before content, in dependency order
+### Step 3 — Build the models with img2threejs
+
+3D modeling in this skill is the vendored pipeline, never hand-authored geometry
+(`img2threejs/PIPELINE.md`; Apache-2.0, vendored at `img2threejs/`):
+
+```bash
+python img2threejs/forge/stage1_intake/probe_image.py reference.png
+python img2threejs/forge/stage2_spec/validate_sculpt_spec.py spec.json --strict-quality
+python img2threejs/forge/stage3_build/generate_threejs_factory.py spec.json --out model/createObjectModel.ts
+```
+
+The factory arrives as TypeScript with ES imports; adapt it for the single file:
+
+1. Strip the type annotations — the generated code is structurally plain JS.
+2. Replace `import * as THREE from 'three'` and any `three/examples/jsm/*` imports with the
+   inlined global `window.THREE` build; paste in the few jsm helpers the model actually uses.
+   OrbitControls is rarely one of them — the game owns its camera.
+3. Paste the factory into the `<script>` IIFE as a `models` module and call it from a spec
+   table row. The factory is deterministic: record the spec seed beside the world seed.
+
+Nothing in this step produces an image file. The factory is code, its textures are generated
+inside it, and its output is a rigged `THREE.Group` with named materials and joints the game
+can pose.
+
+### Step 4 — Systems before content, in dependency order
 
 Loop + resize + DPR + colour pipeline → input intent → scene machine
 (`boot → title → play → paused → over`) → art primitives → entities and collision → audio and
@@ -202,7 +232,7 @@ HUD feedback → content (waves, levels, tables, dialogue). Each layer must be o
 the next is written. A one-line debug HUD (`scene`, `fps`, `entities`, `errors`) after step one
 saves hours by step six (`references/resilience-and-a11y.md`).
 
-### Step 4 — Light it like a shot, not a test scene
+### Step 5 — Light it like a shot, not a test scene
 
 One pass, in this order: **composition** (one foreground object, one subject, a skyline gap where
 the sun sets) → **key light** (pick the direction, derive ambient, fog and rim from it) →
@@ -214,23 +244,23 @@ here, in the pipeline, before any content. A depth texture on the scene target i
 thing to wire.
 
 Numbers and the failure each step prevents: `references/cinematic-look.md`,
-`references/material-authoring.md`. Wire mouse free-look (`§2A.C`) in Step 3's input layer,
+`references/material-authoring.md`. Wire mouse free-look (`§2A.C`) in Step 4's input layer,
 not as a late fix.
 
-### Step 5 — Make it feel alive
+### Step 6 — Make it feel alive
 
 Cheap, high-yield, in this order: a 2–4 px shake on impact, a short particle burst on every state
 change, a 120 ms scale-pop on the thing you hit, a vignette, a two-note audio tick on every
 action, idle breathing on anything alive. Two feedback channels per state change —
 `references/game-feel.md` is the table.
 
-### Step 6 — Persist and resume
+### Step 7 — Persist and resume
 
 Progress, best score and settings are separate versioned keys, every storage call in `try/catch`
 (private mode throws), and a corrupt save never blocks boot — see
 `references/state-and-persistence.md`.
 
-### Step 7 — Self-review, repair, re-shoot, then audit
+### Step 8 — Self-review, repair, re-shoot, then audit
 
 Content is done, the build is not. Run §2A.A's loop **at least twice**: capture title,
 gameplay, character close-up and hero-effect shots; score all nine axes in writing; repair
@@ -256,10 +286,13 @@ before definition. No classes unless state is genuinely per-instance.
 | Path | Read it when |
 | --- | --- |
 | `references/architecture.md` | You need the shell, the scene machine or the loop contract |
-| `references/procedural-3d.md` | WebGL2 setup, camera, generated textures, quality tiers, fallback |
+| `references/procedural-3d.md` | Inline three.js integration, camera, generated textures, quality tiers, fallback |
 | `references/cinematic-look.md` | Sun, sky, shadows, volumetrics, AO, bloom, tone map, grade, the ten-second test |
 | `references/material-authoring.md` | PBR channels, height → normal, wear, seams, triplanar, water, baking |
-| `references/asset-craft.md` | The craft gate: teardown evidence, six constraints, `--craft` signals, catch-up order |
+| `references/asset-craft.md` | Craft-gate rationale: teardown evidence, `--craft` signal groups, backstop for files built outside the pipeline |
+| `img2threejs/PIPELINE.md` | **The modeling pipeline**: stages, quality gates, review contracts, script reference (vendored, Apache-2.0) |
+| `img2threejs/forge/` | The pipeline scripts: intake, spec validation, factory generation, staged review, rig |
+| `THIRD_PARTY.md` | Provenance and license of the vendored img2threejs copy |
 | `references/procedural-art-2d.md` | 2D only: seeded palettes, shape primitives, tile baking, effects |
 | `references/game-feel.md` | Hitstop, shake, easing, particles, audio layering, HUD motion |
 | `references/procedural-audio.md` | Any sound: SFX table, noise, step-sequenced music, mixing |
@@ -270,7 +303,7 @@ before definition. No classes unless state is genuinely per-instance.
 | `references/design-language.md` | Tokens, HUD composition, buttons, type scale |
 | `references/visual-self-review.md` | The mandatory shot → score → repair → re-shoot loop, the limb-connection checklist, defect recipes, report template |
 | `references/release-checklist.md` | The final pass; the ship gate, not a suggestion |
-| `assets/starter-3d.html` | Runnable WebGL2 slice: HDR, shadows, volumetrics, SSAO, bloom, ACES, playable |
+| `assets/starter-3d.html` | Raw-WebGL2 reference slice for the post chain (HDR, shadows, volumetrics, SSAO, bloom, ACES) — a shell, not the modeling path; 3D deliverables inline three.js and build models with img2threejs |
 | `assets/starter-2d.html` | Runnable canvas shell, playable, juice included |
 | `scripts/scaffold.py` | Generate a named game from either shell |
 | `scripts/check_single_file.py` | Format audit; `--strict` and `--craft` are the gates |
@@ -283,7 +316,11 @@ before definition. No classes unless state is genuinely per-instance.
 - **Loading a CDN "just for the prototype."** The prototype is the deliverable; a CDN turns a
   one-file game into a two-file game with a dependency on someone else's uptime.
 - **Writing a renderer to avoid an inline engine.** Zero runtime requests is the rule; a 1.4 MB
-  inline library is still one file.
+  inline three.js is still one file — and a 3D deliverable without `THREE` markers now fails
+  the audit outright.
+- **Hand-assembling characters from boxes and capsules.** Modeling is the img2threejs pipeline;
+  an ad-hoc primitive stack is how rigs detach, materials collapse to RGB triples, and the
+  audit fails.
 - **Untextured boxes under a flat ambient.** The fastest way to look like a placeholder — and
   with `--craft`, a failing audit rather than just a bad eye test.
 - **An RGB triple as a material.** Albedo is one channel; no roughness, wear or seam means no
@@ -318,8 +355,10 @@ before definition. No classes unless state is genuinely per-instance.
 ## 8. Handing off
 
 Report the file path and size, what was verified (audit output **including the `--craft` result
-and the `3D hard constraints: 4/4` line**, devices and frame budget observed), the **six-axis
-score plus the three review axes with the weakest axis named**, the **self-review rounds and
-the before/after fixes** (including the character close-up), confirmation that SSAO and
-depth-aware volumetrics are in the shipped pipeline and that mouse look needs no drag, and the
-one thing to build next. Say explicitly that the player only needs the single file.
+and the `3D hard constraints: 4/4` line**, devices and frame budget observed), confirmation that
+three.js is inlined (version noted) and that the models came from the img2threejs pipeline with
+the spec seed recorded, the **six-axis score plus the three review axes with the weakest axis
+named**, the **self-review rounds and the before/after fixes** (including the character
+close-up), confirmation that SSAO and depth-aware volumetrics are in the shipped pipeline and
+that mouse look needs no drag, and the one thing to build next. Say explicitly that the player
+only needs the single file.

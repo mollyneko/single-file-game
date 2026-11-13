@@ -74,8 +74,10 @@ shadow map  ->  HDR scene (PBR sky + ground + props)  ->  volumetric sun shafts
 ```
 
 > The starter hand-writes its renderer on purpose — 75 KB that shows every pass at once, and a
-> `2/4` on the craft gate. A shipped 3D game should not spend its budget this way: inline an
-> engine, then put the bytes into assets ([`references/asset-craft.md`](references/asset-craft.md)).
+> `2/4` on the craft gate. It is a reference slice, not the modeling path: a shipped 3D game
+> **must inline three.js** and **must build every model with the vendored
+> [img2threejs](https://github.com/img2threejs/img2threejs) pipeline** (`img2threejs/PIPELINE.md`) —
+> reference image in, quality-gated rigged `THREE.Group` factory out. Both rules are audited.
 
 What that buys, concretely:
 
@@ -159,9 +161,9 @@ single-file-game/
 ├── references/
 │   ├── architecture.md         file layout, scene machine, loop contract, resize/DPR
 │   ├── procedural-art-2d.md    seeded palettes, shape primitives, tile baking, effects
-│   ├── procedural-3d.md        WebGL2 setup, generated textures, grade, quality tiers
+│   ├── procedural-3d.md        inline three.js, generated textures, grade, quality tiers
 │   ├── cinematic-look.md       the render stack: sun, sky, shadows, volumetrics, bloom, grade
-│   ├── asset-craft.md          the 3D hard gate: bevel, material library, generated maps, skinning
+│   ├── asset-craft.md          craft-gate rationale: teardown evidence, --craft signals
 │   ├── material-authoring.md   PBR channels, wear, seams, triplanar, water, baking
 │   ├── game-feel.md            hitstop, shake, easing, particles, audio layering, HUD motion
 │   ├── procedural-audio.md     SFX bus, noise, step-sequenced music, mixing
@@ -172,14 +174,18 @@ single-file-game/
 │   ├── design-language.md      tokens, type scale, buttons, HUD composition
 │   ├── visual-self-review.md   shot → score → repair → re-shoot loop, rig checklist
 │   └── release-checklist.md    the ship gate
+├── img2threejs/                vendored modeling pipeline (Apache-2.0): image → rigged
+│   │                           THREE.Group factory; entry: PIPELINE.md
+│   └── …                      forge/ stages, grimoire/ rules, docs/, its own LICENSE
 ├── assets/
 │   ├── starter-2d.html         runnable canvas game shell
-│   └── starter-3d.html         runnable WebGL2 game shell
+│   └── starter-3d.html         raw-WebGL2 post-chain reference slice (a shell, not the path)
 ├── scripts/
 │   ├── scaffold.py             generate a named game from a template
 │   └── check_single_file.py    audit a file against the format rules
 ├── docs/
 │   └── method.md               why the constraints exist, and when not to use them
+├── THIRD_PARTY.md              provenance and license of the vendored pipeline
 └── tests/                      unit tests for both tools
 ```
 
@@ -227,6 +233,10 @@ development with file-level review, or per-level deep links and A/B testing.
 
 For prototypes, demos, game jams, teaching, internal tools and small products, one file is
 not a compromise — it is the shortest path between an idea and a player.
+
+## Acknowledgements
+
+Every 3D model is built by [img2threejs](https://github.com/img2threejs/img2threejs), vendored under `img2threejs/` (Apache-2.0, see [`THIRD_PARTY.md`](THIRD_PARTY.md)) — thanks to its authors.
 
 ## License
 

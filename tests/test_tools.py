@@ -70,8 +70,9 @@ cv.addEventListener('pointermove', e => { look.dx += e.clientX - lastX; });
 CRAFT_3D = BARE_3D.replace(
     "const shader = gl.createShader(gl.VERTEX_SHADER);",
     """const shader = gl.createShader(gl.VERTEX_SHADER);
+window.THREE = { WebGLRenderer: function(){}, LatheGeometry: function(){} };
 const profilePoints = [[0, .016], [.295, .022]];
-const geo = new LatheGeometry(profilePoints, 22);
+const geo = new THREE.LatheGeometry(profilePoints, 22);
 geo.computeVertexNormals();
 const bevel = 0.03;
 const MATERIALS = { steel_galv: { roughness: 0.4, metalness: 1.0 } };
@@ -143,6 +144,47 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         for group in ("geometry craft", "material library", "generated textures", "continuous skinning"):
             self.assertIn(group, result.stdout)
+
+    # --- inlined three.js is mandatory (SKILL.md section 0) --------------
+    def test_3d_deliverable_requires_inlined_three(self):
+        # BARE_3D is a raw-WebGL2 file with no GAME marker: a deliverable, and
+        # a deliverable without three.js now fails outright.
+        result = self.audit(BARE_3D, "--craft")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("three.js", result.stdout)
+        self.assertIn("SKILL.md section 0", result.stdout)
+
+    def test_three_js_gate_not_enforced_without_craft(self):
+        result = self.audit(BARE_3D, "--strict")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("no inlined three.js build detected", result.stdout)
+
+    def test_shell_with_game_marker_is_exempt_from_3d_gates(self):
+        # A scaffold shell (GAME markers kept) is described, not failed — even
+        # with --strict --craft. This is the documented exemption, in code.
+        shell = CRAFT_ONLY_3D.replace(
+            "<script>",
+            "<script>\n/* ====== GAME (replace this block) ====== */\n/* ====== end GAME ====== */",
+        )
+        result = self.audit(shell, "--strict", "--craft")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("scaffold shell", result.stdout)
+        self.assertIn("craft gate not enforced until the GAME block", result.stdout)
+        self.assertIn("hard constraints not enforced until the GAME block", result.stdout)
+
+    def test_starter_3d_shell_passes_craft_flag(self):
+        # The bundled raw-WebGL2 starter is a shell: --strict --craft must not
+        # fail it, but it must say what a deliverable needs.
+        result = run(CHECK, str(ROOT / "assets" / "starter-3d.html"), "--strict", "--craft")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("scaffold shell", result.stdout)
+        self.assertIn("no inlined three.js build yet", result.stdout)
+
+    def test_json_reports_shell_flag(self):
+        result = self.audit(CRAFT_3D, "--json", "--craft")
+        payload = json.loads(result.stdout)[0]
+        self.assertFalse(payload["shell"])
+        self.assertTrue(payload["ok"])
 
     def test_craft_gate_accepts_fully_crafted_3d(self):
         result = self.audit(CRAFT_3D, "--strict", "--craft")

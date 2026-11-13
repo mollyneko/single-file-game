@@ -21,7 +21,7 @@
 "게임 만드는 법"을 설명하는 튜토리얼이 아닙니다. 실제 단일 파일 게임에서 뽑아내어 정말로 효과가 있는
 부분만 남긴 **실행 가능한 방법**과, 그 방법을 강제하는 도구 모음입니다.
 
-**기본 산출물은 3D입니다.** 2D는 요청이 있을 때 고르는 노선이며, 기본으로 흘러가는 대체재가 아닙니다.
+**기본 산출물은 3D입니다.** 2D는 요청할 때만 선택하는 노선이지, 기본 대안이 아닙니다.
 
 | 2D — 선택 노선, 완성된 게임 | 3D — 기본 노선, 완성된 게임 |
 | --- | --- |
@@ -38,7 +38,7 @@
 **공간·빛·재질·반사·세계의 디테일·예산.** 카메라는 장면 안에 있고, 태양은 하나이며 그림자는 실제로
 계산되고, 재질에는 마모와 이음매가 있고, 반사는 지평선과 일치하며, 표면에는 아무도 읽지 않을 정보가
 얹혀 있고, 바이트는 엔진 재구현이 아니라 에셋에 쓰입니다. 여섯 중 셋을 놓치면 기능 목록이 아무리
-길어도 그것은 프로토타입입니다. 각 축의 하한과 수치, 그것이 막는 실패는
+길어도 그것은 프로토타입입니다. 각 축의 합격선과 수치, 그리고 이 기준이 없을 때 생기는 문제는
 [`SKILL.md`](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes)에 있습니다.
 
 ## 단일 파일은 '프로토타입 화질'의 변명이 아니다
@@ -53,9 +53,10 @@
 ```
 
 > 템플릿은 일부러 렌더러를 직접 작성했습니다. 75 KB로 모든 패스를 한 번에 볼 수 있는 대신
-> 크래프트 게이트는 `2/4`입니다. 출시할 3D 게임은 예산을 이렇게 쓰면 안 됩니다. 엔진을
-> 인라인하고 바이트는 에셋에 쓰세요
-> ([`references/asset-craft.md`](references/asset-craft.md)).
+> 크래프트 게이트는 `2/4`입니다. 이것은 참조 슬라이스일 뿐 모델링 경로가 아닙니다. 출시할
+> 3D 게임은 **three.js 인라인 필수**, **모든 모델을 저장소에 수록한
+> [img2threejs](https://github.com/img2threejs/img2threejs) 파이프라인으로 생성 필수**
+> (`img2threejs/PIPELINE.md`). 두 규칙 모두 감사기가 확인합니다.
 
 무엇을 얻는가:
 
@@ -107,7 +108,7 @@ xdg-open orb-runner.html    # Linux
 
 `--mode 3d`를 주면 WebGL2 경로가 됩니다. 두 템플릿 모두 완성된 껍데기입니다. 디자인 토큰, 부팅 화면,
 타이틀, HUD, 일시정지·결과 카드, 입력 레이어, 오디오 버스, 저장 버스, 에러 경계, 적응형 화질, 그리고
-당신의 규칙을 넣을 표시된 블록까지 들어 있습니다.
+직접 규칙을 넣을 전용 블록까지 들어 있습니다.
 
 ## 스킬로 설치
 
@@ -136,9 +137,9 @@ single-file-game/
 ├── references/
 │   ├── architecture.md         파일 구조, 씬 머신, 루프 계약, 리사이즈와 DPR
 │   ├── procedural-art-2d.md    시드 팔레트, 도형 기본기, 타일 굽기, 이펙트
-│   ├── procedural-3d.md        WebGL2 구성, 생성 텍스처, 그레이딩, 화질 단계
+│   ├── procedural-3d.md        three.js 인라인, 생성 텍스처, 그레이딩, 화질 단계
 │   ├── cinematic-look.md       렌더 스택: 태양, 하늘, 그림자, 볼류메트릭, Bloom, 그레이드
-│   ├── asset-craft.md          3D 필수 게이트: 베벨, 재질 라이브러리, 생성 텍스처, 스키닝
+│   ├── asset-craft.md          크래프트 게이트 근거: 티어다운 증거, --craft 신호 그룹
 │   ├── material-authoring.md   PBR 채널, 마모, 이음새, 트라이플래너, 물, 베이크
 │   ├── game-feel.md            히트스톱, 흔들림, 이징, 파티클, 오디오 레이어, HUD 모션
 │   ├── procedural-audio.md     SFX 버스, 노이즈, 스텝 시퀀서 음악, 믹싱
@@ -147,15 +148,20 @@ single-file-game/
 │   ├── performance.md          프레임 예산, 굽기, 풀링, 적응형 화질
 │   ├── resilience-and-a11y.md  에러 경계, 단계적 축소, 모션 감소
 │   ├── design-language.md      토큰, 타입 스케일, 버튼, HUD 구성
+│   ├── visual-self-review.md   촬영 → 채점 → 수정 → 재촬영 루프, 리그 체크리스트
 │   └── release-checklist.md    출시 전 체크리스트
+├── img2threejs/                수록한 모델링 파이프라인(Apache-2.0): 참조 이미지 →
+│   │                           리그 붙은 THREE.Group 팩토리. 진입점은 PIPELINE.md
+│   └── …                      forge/ 단계, grimoire/ 규칙, docs/, 자체 LICENSE
 ├── assets/
 │   ├── starter-2d.html         바로 실행되는 Canvas 게임 껍데기
-│   └── starter-3d.html         바로 실행되는 WebGL2 게임 껍데기
+│   └── starter-3d.html         순수 WebGL2 포스트체인 참조 슬라이스(껍데기이지 경로가 아님)
 ├── scripts/
 │   ├── scaffold.py             템플릿에서 이름 있는 게임 생성
 │   └── check_single_file.py    규칙에 비추어 파일 감사
 ├── docs/
 │   └── method.md               왜 이런 제약인지, 언제 쓰지 말아야 하는지
+├── THIRD_PARTY.md              수록한 파이프라인의 출처와 라이선스
 └── tests/                      두 도구의 단위 테스트
 ```
 
@@ -168,7 +174,9 @@ single-file-game/
    노출을 만지기 전에 sRGB 인코딩을 확인한다.
 5. **콘텐츠는 데이터로.** 손으로 쓴 인스턴스가 아니라 표와 시드 생성기.
 6. **손맛은 의도적으로 설계한다.** 흔들림, 파티클, 팝, 클릭음, 대기 모션 — 모두 저렴하고 모두 점검 항목.
-7. **감사하고 넘긴다.** `check_single_file.py --strict`(3D는 `--craft` 추가), 이어서 릴리스 체크리스트.
+7. **스스로 보고, 고치고, 다시 찍고, 감사한다.** 캐릭터 확대 컷을 포함해 실제 스크린샷을
+   2라운드 이상 찍고 9개 축을 문서로 채점한다. 그다음 `check_single_file.py --strict --craft`
+   (에셋 크래프트 **와** 세 가지 하드 제약)와 릴리스 체크리스트를 통과시킨다.
 
 근거는 [`docs/method.md`](docs/method.md), 실무 디테일은 [`SKILL.md`](SKILL.md)에 있습니다.
 
@@ -178,7 +186,7 @@ single-file-game/
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | 템플릿을 복사하고 제목·부팅 표기·저장 네임스페이스·강조색을 설정 |
 | `python scripts/check_single_file.py X.html --strict` | 원격 리소스, 네트워크 호출, 빠진 껍데기, 존재하지 않는 요소 ID, 과대 용량이면 실패 |
-| `python scripts/check_single_file.py X.html --strict --craft` | 3D 출하 게이트: 형상 가공·재질 라이브러리·생성 텍스처·스키닝 누락 시 실패 |
+| `python scripts/check_single_file.py X.html --strict --craft` | 3D 출하 게이트: 형상 가공·재질 라이브러리·생성 텍스처·스키닝 누락, **그리고** SSAO·깊이 인식 볼류메트릭·프리룩 마우스·`SELF-REVIEW` 기록 누락 시 실패(각 게이트 `4/4`) |
 | `python -m unittest discover -s tests -v` | 감사기와 스캐폴드를 정상/비정상 파일로 검증 |
 
 도구 모음의 핵심은 감사기입니다. 이 형식이 저지르기 쉬운 실수를 정확히 겨냥합니다. "일단" 추가한
@@ -199,6 +207,10 @@ FAIL  game.html  (1284.6 KB)
 
 프로토타입, 데모, 게임 잼, 교육, 사내 도구, 작은 제품에서는 파일 하나가 타협이 아닙니다. 아이디어에서
 플레이어까지의 가장 짧은 길입니다.
+
+## 감사의 말
+
+3D 모델은 모두 수록한 [img2threejs](https://github.com/img2threejs/img2threejs)(Apache-2.0, [`THIRD_PARTY.md`](THIRD_PARTY.md) 참조)가 만들며, 저자분들께 감사드립니다.
 
 ## 라이선스
 

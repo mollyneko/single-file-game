@@ -1,60 +1,44 @@
 # Procedural 3D (WebGL2)
 
-3D in one file is viable, and the default route is to paste a minified engine inline and spend
-the bytes on assets. PBR, shadow maps, IBL, skinning and curve geometry are solved problems;
-re-implementing them is how a single-file 3D game ends up with a complete post stack and
-primitive art — a full composite chain grading untextured boxes. Hand-written WebGL2 stays
-legitimate for a small stylised scene, or once the asset layer is already complete. It is the
-exception, not the budget you defend.
+3D in one file is viable, and there is exactly one route: paste a minified **three.js** build
+inline and spend the bytes on assets. PBR, shadow maps, IBL, skinning and curve geometry are
+solved problems; re-implementing them is how a single-file 3D game ends up with a complete post
+stack and primitive art — a full composite chain grading untextured boxes. A hand-written
+WebGL2 renderer is not permitted in a deliverable (`SKILL.md` §0); the bundled
+`assets/starter-3d.html` survives only as a raw-WebGL2 reference slice for the post chain.
 
-## Two viable paths
+## One path: inline three.js
 
-| Path | Cost | When |
-| --- | --- | --- |
-| Inlined library — **default** | +0.7–1.4 MB minified, pasted inline | Anything with PBR, shadows, skins, curves or instancing: most 3D |
-| Raw WebGL2 | ~300 lines of setup, full control | Small stylised scene, no animated characters, asset layer already done |
-
-If you inline a library, paste the **minified build inside the same `<script>`** and record
-its version and licence in a header comment. A `<script src>` pointing at a CDN violates the
+Every 3D deliverable pastes a **minified three.js build** (global `window.THREE`, MIT) inside
+the same `<script>` and records its version and licence in a header comment. 0.6–1.4 MB is the
+expected, budgeted cost — it is still one file, and it buys PBR, IBL, shadow maps, skinning,
+curve geometry and instancing as working code. A `<script src>` pointing at a CDN violates the
 single-file rule and turns one artifact into two with a third-party uptime dependency.
+
+Models come from the img2threejs pipeline (`img2threejs/PIPELINE.md`): reference image →
+staged, quality-gated sculpt → a `createObjectModel` factory that emits a rigged
+`THREE.Group`. Scene assembly, lighting and post are three.js on top of those models.
 
 ## Boot in the right order
 
-`getContext` → capability probe → program compile → geometry → textures → post targets →
-first frame. Every stage updates the boot bar, and every stage can fail into the 2D fallback.
+renderer → capability probe → materials and geometry → textures → post targets → first frame.
+Every stage updates the boot bar, and every stage can fail into the 2D fallback:
 
 ```js
-const gl = cv.getContext('webgl2', {
-  antialias: false, alpha: false, depth: true, stencil: false,
-  powerPreference: 'high-performance',
+const renderer = new THREE.WebGLRenderer({
+  canvas: cv, antialias: false, alpha: false, powerPreference: 'high-performance',
 });
-if (!gl) return fallback2D();                        // never a black screen
-
-const caps = {
-  maxTex: gl.getParameter(gl.MAX_TEXTURE_SIZE),
-  colorFloat: !!gl.getExtension('EXT_color_buffer_float'),
-  aniso: gl.getExtension('EXT_texture_filter_anisotropic'),
-};
+if (!renderer.capabilities.isWebGL2) return fallback2D();   // never a black screen
+renderer.outputColorSpace = THREE.SRGBColorSpace;           // encode once, at the end
 ```
 
-Compile with real error reporting — a silent shader failure is the most common way to end up
-with a black canvas:
+Keep real error reporting on shader compilation — a silent shader failure is the most common
+way to end up with a black canvas:
 
 ```js
-function program(vs, fs, name = 'prog'){
-  const p = gl.createProgram();
-  [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]].forEach(([type, src]) => {
-    const s = gl.createShader(type);
-    gl.shaderSource(s, src); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
-      throw new Error(`${name} shader: ${gl.getShaderInfoLog(s)}`);
-    gl.attachShader(p, s);
-  });
-  gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS))
-    throw new Error(`${name} link: ${gl.getProgramInfoLog(p)}`);
-  return p;
-}
+renderer.debug.checkShaderErrors = true;
+renderer.debug.onShaderError = (gl, prog, vs, fs) =>
+  fatal(new Error('shader: ' + gl.getShaderInfoLog(fs)));
 ```
 
 ## Render graph

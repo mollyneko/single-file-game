@@ -2,10 +2,13 @@
 """Audit a single-file HTML game against the format rules and the 3D ship gates.
 
 Checks the things that actually break this format: remote resources, missing shell parts,
-dangling element IDs and runaway file size. With --craft it enforces both 3D gates: the asset
-layer (bevel/curved geometry, a named material library, generated textures, continuous
-skinning) and SKILL.md section 2A's hard constraints (depth-based SSAO, depth-aware
-volumetrics, free-look mouse, a recorded visual self-review).
+dangling element IDs and runaway file size. With --craft it enforces the 3D ship gates: an
+inlined three.js build (mandatory, SKILL.md section 0), the asset layer (bevel/curved
+geometry, a named material library, generated textures, continuous skinning) and section 2A's
+hard constraints (depth-based SSAO, depth-aware volumetrics, free-look mouse, a recorded
+visual self-review). A scaffold shell — a file that still carries the
+`GAME (replace this block)` marker — is reported as a shell: the 3D gates describe rather
+than fail until the block is replaced.
 
     python check_single_file.py game.html
     python check_single_file.py game.html --strict
@@ -70,6 +73,15 @@ IS_3D = re.compile(
     r"createShader|compileShader|\bTHREE\.",
     re.IGNORECASE,
 )
+# --- inlined three.js is mandatory (SKILL.md section 0) ------------------
+# The markers live inside the minified engine line, so this check runs on the
+# whole text, not the game-source strip: the library's presence is the point.
+THREE_SIGNAL = re.compile(
+    r"window\.THREE\s*=|THREE\.WebGLRenderer|new\s+THREE\.", re.IGNORECASE
+)
+# A scaffold shell still carries the marker scaffold.py told the user to replace.
+# Shells are described, not failed: the asset layer is the user's first task.
+SHELL_SIGNAL = re.compile(r"GAME\s*\(\s*replace this block\s*\)", re.IGNORECASE)
 BONE_SIGNAL = re.compile(
     r"BONE_DEFS|\bbones\b|\bSkeleton\b|computePose|poseEntity|\bskinning\b|\bboneIndex\b",
     re.IGNORECASE,
@@ -215,6 +227,7 @@ def craft_check(text: str) -> tuple[list[str], list[str], bool]:
 class Report:
     path: Path
     size_kb: float = 0.0
+    shell: bool = False
     failures: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
@@ -241,6 +254,7 @@ class Report:
             "path": str(self.path),
             "size_kb": round(self.size_kb, 1),
             "ok": self.ok,
+            "shell": self.shell,
             "failures": self.failures,
             "warnings": self.warnings,
             "notes": self.notes,
@@ -335,14 +349,30 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
     else:
         r.note(f"file is {r.size_kb:.0f} KB")
 
-    # --- 3D gates: asset craft, then section 2A hard constraints ----------
+    # --- 3D gates: three.js inline, asset craft, section 2A constraints ---
     if IS_3D.search(text):
+        is_shell = SHELL_SIGNAL.search(text) is not None
+        r.shell = is_shell
+        if is_shell:
+            r.note("scaffold shell: replace the GAME block to make it a deliverable")
+
+        if not THREE_SIGNAL.search(text):
+            if is_shell:
+                r.note("shell has no inlined three.js build yet — a deliverable must (SKILL.md section 0)")
+            elif craft:
+                r.fail("3D deliverable without an inlined three.js build — see SKILL.md section 0")
+            else:
+                r.note("no inlined three.js build detected; a 3D deliverable must inline it (SKILL.md section 0)")
+
         hits, missing, needs_skin = craft_check(text)
         r.craft_hits, r.craft_missing = hits, missing
         r.note(f"3D asset-craft signals: {len(hits)}/4" + (f" (skinning required: {needs_skin})" if needs_skin else ""))
         if craft:
-            for group in missing:
-                r.fail(f"3D craft gate: {group} missing — see references/asset-craft.md")
+            if is_shell:
+                r.note("shell: craft gate not enforced until the GAME block is replaced")
+            else:
+                for group in missing:
+                    r.fail(f"3D craft gate: {group} missing — see references/asset-craft.md")
         elif missing:
             r.note("3D craft gate not enforced; ship with --strict --craft")
 
@@ -352,8 +382,11 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
         for line in h_detail:
             r.note(f"  {line}")
         if craft:
-            for group in h_missing:
-                r.fail(f"3D hard constraint: {group} missing — see SKILL.md section 2A")
+            if is_shell:
+                r.note("shell: hard constraints not enforced until the GAME block is replaced")
+            else:
+                for group in h_missing:
+                    r.fail(f"3D hard constraint: {group} missing — see SKILL.md section 2A")
         elif h_missing:
             r.note("3D hard constraints not enforced; ship with --strict --craft")
     elif craft:

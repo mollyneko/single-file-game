@@ -34,8 +34,8 @@
 ### 按六个维度评判
 
 **空间、光照、材质、反射、世界细节、性能预算。** 相机在场景内部、一个太阳带真实阴影、材质带磨损与
-接缝、反射与地平线一致、表面带着没人会去读的信息、字节花在资产上而不是重写引擎。六条里缺三条，
-无论功能列表多长都还是原型。每条的下限、数字与它防止的具体失败：
+接缝、反射与地平线一致、表面带着没人会去读的信息、字节花在资产上而不是重写引擎。六条里掉三条
+以上，功能列表写得再长也还是原型。每条的及格线、对应数值，以及不守这条时最典型的翻车样子：
 [`SKILL.md`](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes)。
 
 ## 三条强制约束（MUST）
@@ -64,8 +64,9 @@
 ```
 
 > 模板是故意手写渲染器的——75 KB 里能一次看完全部 pass，代价是工艺门禁只有 `2/4`。
-> 真正要交付的 3D 游戏不该这么花预算：先内联引擎，再把字节花到资产上
-> （[`references/asset-craft.md`](references/asset-craft.md)）。
+> 它只是参考切片，不是建模路线：正式交付的 3D 游戏**必须内联 three.js**，且**每个模型都必须
+> 由内置的 [img2threejs](https://github.com/img2threejs/img2threejs) 流水线生成**
+> （`img2threejs/PIPELINE.md`）——参考图进，带骨骼的 `THREE.Group` 工厂出。这两条都有审计器把关。
 
 具体换来什么：
 
@@ -73,14 +74,14 @@
   到的地平线和水里倒映的地平线必然一致。
 - **有尺度的表面。** 每个材质五个通道——反照率、粗糙度、金属度、高度、AO——加上底漆→锈蚀的磨损
   次序、物体空间的钢板接缝，以及会变暗、变平、变镜面的湿润遮罩。
-- **大气。** 半分辨率光线步进，带 Henyey-Greenstein 相函数、高度密度和逐步阴影查询。"三维感"和
-  "一个地方"的差别就在这里。
+- **大气。** 半分辨率光线步进，带 Henyey-Greenstein 相函数、高度密度和逐步阴影查询。"有 3D 画面"
+  和"有一个地方"，差距就在这一步。
 - **调色而不是滤镜。** ACES、冷暖分离、暗角、1.2% 颗粒，按顺序做，最后只编码一次。
 
 完整推导、数值与失败模式见 [`references/cinematic-look.md`](references/cinematic-look.md) 与
 [`references/material-authoring.md`](references/material-authoring.md)。
 
-模板本身开箱就是这样，你还没写一行自己代码的时候：
+模板开箱即是这样——你一行自己的代码都还没写：
 
 ![3D 模板开箱画面](docs/starter-3d.png)
 
@@ -144,9 +145,9 @@ single-file-game/
 ├── references/
 │   ├── architecture.md         文件布局、场景机、主循环契约、缩放与 DPR
 │   ├── procedural-art-2d.md    种子调色板、图形原语、瓦片烘焙、特效
-│   ├── procedural-3d.md        WebGL2 搭建、生成贴图、调色、画质档位
+│   ├── procedural-3d.md        内联 three.js、生成贴图、调色、画质档位
 │   ├── cinematic-look.md       渲染栈：太阳、天空、阴影、体积光、Bloom、调色
-│   ├── asset-craft.md          3D 交付硬门槛：倒角、材质库、生成贴图、连续蒙皮
+│   ├── asset-craft.md          工艺门禁依据：拆解证据、--craft 信号组
 │   ├── material-authoring.md   PBR 通道、磨损、接缝、三平面投影、水面、烘焙
 │   ├── game-feel.md            顿帧、抖动、缓动、粒子、音频分层、HUD 动效
 │   ├── procedural-audio.md     SFX 总线、噪声、步进音乐、混音
@@ -157,14 +158,18 @@ single-file-game/
 │   ├── design-language.md      设计变量、字号阶梯、按钮、HUD 构图
 │   ├── visual-self-review.md   实拍 → 打分 → 修复 → 复拍闭环、肢体连接检查表
 │   └── release-checklist.md    发布前检查清单
+├── img2threejs/                内置建模流水线（Apache-2.0）：参考图进，带骨骼的
+│   │                           THREE.Group 工厂出；入口是 PIPELINE.md
+│   └── …                      forge/ 各阶段、grimoire/ 规则、docs/、自带 LICENSE
 ├── assets/
 │   ├── starter-2d.html         可直接运行的 Canvas 游戏壳
-│   └── starter-3d.html         可直接运行的 WebGL2 游戏壳
+│   └── starter-3d.html         原生 WebGL2 后期链参考切片（壳，不是建模路线）
 ├── scripts/
 │   ├── scaffold.py             从模板生成一个具名游戏
 │   └── check_single_file.py    按格式规则审计文件
 ├── docs/
 │   └── method.md               为什么有这些约束，以及什么时候不该用
+├── THIRD_PARTY.md              内置流水线的出处与许可
 └── tests/                      两个工具的单元测试
 ```
 
@@ -203,10 +208,14 @@ FAIL  game.html  (1284.6 KB)
 
 ## 什么时候不该用
 
-诚实地划清边界。需要实时联机同步、大量手工美术或音乐素材、长期多人协作与文件级评审、按关卡深链
-接或 A/B 测试时，请用正常的构建流程和素材管线。
+诚实地划清边界。需要实时联机同步、大量手工美术或音乐素材、长期多人协作与文件级评审、按关卡
+直达链接或 A/B 测试时，请用正常的构建流程和素材管线。
 
 而在原型、演示、Game Jam、教学、内部工具与小产品场景里，单文件不是妥协——它是从想法到玩家的最短路径。
+
+## 致谢
+
+所有 3D 模型都由原样收录的 [img2threejs](https://github.com/img2threejs/img2threejs)（Apache-2.0，见 [`THIRD_PARTY.md`](THIRD_PARTY.md)）生成，感谢其作者。
 
 ## 许可
 
