@@ -4,6 +4,44 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-11-13
+
+2D is no longer an acceptable default answer to "make me a game", and "looks AAA" is no longer a
+matter of taste: it is six named axes with numbers, scored before handoff.
+
+### Added
+
+- **`SKILL.md` §0 — Default target: 3D, at AAA fidelity.** Unless the request names 2D, the
+  output is a perspective WebGL2 game with an inline engine. The five things "one file" never
+  justifies (fixed top-down zoom, flat ambient, untextured boxes, a hand-written renderer, 2D
+  because 3D is hard) are listed explicitly, along with AAA defined as *a frame that survives
+  inspection plus a loop that closes* rather than content volume.
+- **`SKILL.md` §1 — Six axes**: space, light, material, reflection, world detail, budget. Each
+  carries a numeric floor, the prototype tell it rules out, and the reference that holds the
+  detail; fewer than five of six at the floor means the build is a prototype.
+- Release checklist §0 (target declaration + six-axis score) and two red flags: a 3D brief
+  answered with a fixed-zoom top-down scene, and a frame where nothing casts a shadow.
+- `docs/game-2d.png` — the 2D reference frame in the README hero row.
+
+### Changed
+
+- `SKILL.md` restructured and de-duplicated: the old **Quality bar** (8 checks) and **Asset-craft
+  gate** (6 rules) are folded into §1's six axes and §3's three gates, the separate **Repo map**
+  is merged into the reference index, and the anti-pattern list drops from 14 to 13 while adding
+  the 2D-by-default entry. Net size 14.6 → 15.1 KB, with two whole sections merged.
+- The workflow's look-development step now states the single order (composition → key light →
+  materials → atmosphere → post) instead of repeating five of the old quality checks.
+- README hero row (all four languages) shows two finished games — 2D as an opt-in route, 3D as
+  the default — instead of a generator starter next to a finished 3D game, plus a six-axis
+  summary linking into `SKILL.md`.
+- `docs/method.md` no longer claims "no engine": it now separates *no build step* from *no
+  engine*, and states the 0.8–1.4 MB inline-engine byte range.
+- `references/procedural-3d.md` no longer opens with "3D in one file is viable without any
+  library" — the inlined engine is now the default row in its path table, and the asset layer,
+  not the grading pass, is named as where perceived quality comes from.
+- `--craft` on a non-3D file now explains the skip and names the default target (a note, not a
+  failure, so a deliberate 2D build still audits clean).
+
 ## [1.2.0] — 2026-11-13
 
 The 3D asset layer is now a hard, machine-checked gate. Comparing two single-file 3D games

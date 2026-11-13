@@ -40,8 +40,8 @@ shadow maps, skinned meshes, lathe/tube/extrude geometry and instancing. Hand-wr
 renderer is only justified when the asset layer is *already* complete. If the render pipeline
 is larger than the asset layer, the budget is inverted.
 
-> Rule 1 of `SKILL.md` already permits an inline library. This constraint makes it the default
-> for 3D, and forbids "dependency purity" as a reason to ship primitive art.
+> `SKILL.md` §0 makes an inline library the default for 3D and §2 rule 1 permits it. This
+> constraint forbids "dependency purity" as a reason to ship primitive art.
 
 The auditor understands this build: `fetch()` calls on `THREE.FileLoader` /
 `ImageBitmapLoader` lines are reported as inline-engine loader code rather than game requests,

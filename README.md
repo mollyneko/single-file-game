@@ -1,6 +1,6 @@
 # Single-File Game
 
-**Build a complete, playable browser game as one HTML file. No assets, no build step, no network at runtime.**
+**Build a complete, playable browser game as one HTML file. 3D by default, at AAA fidelity. No assets, no build step, no network at runtime.**
 
 [![validate](https://github.com/mollyneko/single-file-game/actions/workflows/validate.yml/badge.svg)](https://github.com/mollyneko/single-file-game/actions/workflows/validate.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-2f4b3f.svg)](LICENSE)
@@ -23,15 +23,27 @@ bundler, or anyone else's uptime.
 It is not a tutorial about "making games". It is a working method plus the tooling that
 enforces it, extracted from real single-file games and reduced to what actually matters.
 
-| 2D starter, as generated | 3D — a game shipped with it |
-| --- | --- |
-| ![2D starter](docs/starter-2d.png) | ![3D game](docs/game-3d.png) |
-| Canvas 2D · 28 KB · collect, dodge, score, save | WebGL2 · 140 KB · open field, HDR, shadows, volumetrics |
+**Default output is 3D.** 2D is an option you ask for, not the baseline you fall back to.
 
-The left frame is `assets/starter-2d.html` straight out of the generator. The right is a
-finished game built from the same rules — one file, terrain and characters generated at
-runtime, not a texture on disk. Both run from `file://` with the network off, and neither
-frame contains an image file.
+| 2D — opt-in, a finished game | 3D — the default, a finished game |
+| --- | --- |
+| ![2D game](docs/game-2d.png) | ![3D game](docs/game-3d.png) |
+| Canvas 2D · 189 KB · 3840 × 3840 world, four-hero party, element reactions, quests | WebGL2 · 140 KB · open field, HDR, shadows, volumetrics |
+
+Both frames are finished games built from the same rules: one file each, with terrain,
+characters and props generated at runtime rather than loaded from disk. Both open from
+`file://` with the network off, and neither contains an image file — the left frame is a
+3840 × 3840 world drawn entirely with canvas calls, the right one a real-time WebGL2 render
+with a hand-written post chain.
+
+### Judged on six axes
+
+**Space, light, material, reflection, world detail, budget.** A perspective camera inside the
+scene, one sun with real shadows, materials with wear and seams, reflections that agree with the
+horizon, surfaces carrying information nobody will read, and bytes spent on assets instead of on
+re-inventing the engine. Miss three of them and the result is a prototype however long the
+feature list is. Floors, numbers and the failure each axis prevents:
+[`SKILL.md`](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes).
 
 ## It has to look shipped
 
@@ -43,6 +55,10 @@ shadow map  ->  HDR scene (PBR sky + ground + props)  ->  volumetric sun shafts
             ->  SSAO + bilateral blur  ->  bloom pyramid  ->  ACES + grade
             ->  sRGB encode  ->  FXAA + grain
 ```
+
+> The starter hand-writes its renderer on purpose — 75 KB that shows every pass at once, and a
+> `2/4` on the craft gate. A shipped 3D game should not spend its budget this way: inline an
+> engine, then put the bytes into assets ([`references/asset-craft.md`](references/asset-craft.md)).
 
 What that buys, concretely:
 

@@ -1,15 +1,18 @@
 # Procedural 3D (WebGL2)
 
-3D in one file is viable without any library. The bar is lower than it looks: a lit ground
-plane, a handful of boxes, fog, a strong sky and a good final image read as a *place*. Most
-perceived quality comes from the grading pass, not from polygon count.
+3D in one file is viable, and the default route is to paste a minified engine inline and spend
+the bytes on assets. PBR, shadow maps, IBL, skinning and curve geometry are solved problems;
+re-implementing them is how a single-file 3D game ends up with a complete post stack and
+primitive art — a full composite chain grading untextured boxes. Hand-written WebGL2 stays
+legitimate for a small stylised scene, or once the asset layer is already complete. It is the
+exception, not the budget you defend.
 
 ## Two viable paths
 
 | Path | Cost | When |
 | --- | --- | --- |
-| Raw WebGL2 | ~300 lines of setup, full control | Small scenes, stylised look, tight budget |
-| Inlined library | +400–700 KB minified, pasted inline | Scene graphs, skinned meshes, glTF pipelines |
+| Inlined library — **default** | +0.7–1.4 MB minified, pasted inline | Anything with PBR, shadows, skins, curves or instancing: most 3D |
+| Raw WebGL2 | ~300 lines of setup, full control | Small stylised scene, no animated characters, asset layer already done |
 
 If you inline a library, paste the **minified build inside the same `<script>`** and record
 its version and licence in a header comment. A `<script src>` pointing at a CDN violates the

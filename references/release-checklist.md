@@ -3,6 +3,14 @@
 Walk this before handing the file to anyone. A single unchecked box is a bug report waiting
 to happen.
 
+## 0. Target declaration
+
+- [ ] The build is **3D** — or, if it is 2D, the request asked for it or a one-line reason is
+      written down (a perspective camera would not improve the loop).
+- [ ] 2D was not chosen because 3D was hard, and an inline engine was not rejected to keep the
+      file small.
+- [ ] The six axes in `SKILL.md` §1 were scored explicitly, and at most one is below its floor.
+
 ## 1. Format audit
 
 ```bash
@@ -13,6 +21,10 @@ python scripts/check_single_file.py path/to/game.html --strict --craft   # 3D de
 `--craft` is **mandatory** for a shipped 3D game: it fails on missing geometry craft, a
 missing named material library, missing generated textures, or bones without skinning.
 Starters and in-progress scaffolds are exempt. See `references/asset-craft.md`.
+
+A 2D deliverable is audited with `--strict` alone; `--craft` on a non-3D file reports that the
+gate was skipped. The bundled `assets/starter-3d.html` reports `2/4`: it is a shell, and building
+its asset layer is the first task, not a verification step.
 
 Manual confirmation of what the script cannot see:
 
@@ -94,7 +106,8 @@ Manual confirmation of what the script cannot see:
 
 - [ ] File name is stable and versioned: `game-name_v1.html`.
 - [ ] Open the file on a second machine, ideally another OS.
-- [ ] Report back: path, size, what was verified, known limits, next step.
+- [ ] Report back: path, size, six-axis score with the weakest axis named, known limits, next
+      step.
 
 ## 11. Asset craft (3D deliverables only)
 
@@ -113,6 +126,8 @@ Starters are exempt; a deliverable is not. Confirm each one on screen, not just 
 
 ## Red flags that mean "not done"
 
+- A 3D brief answered with a fixed-zoom top-down canvas scene.
+- A frame where nothing casts a shadow, so every object floats.
 - A game that can be lost but not restarted.
 - A canvas that renders only after the second resize.
 - Sound that works after clicking a button but not before (this one is fine — document it).

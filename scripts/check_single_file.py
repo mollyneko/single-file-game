@@ -246,7 +246,10 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
         elif missing:
             r.note("3D craft gate not enforced; ship with --strict --craft")
     elif craft:
-        r.note("not detected as 3D — craft gate skipped")
+        r.note(
+            "not a 3D build: craft gate skipped. 3D is the default target (SKILL.md section 0); "
+            "if this was meant to be 3D, the renderer is the problem"
+        )
 
     # --- informational ---------------------------------------------------
     canvases = len(re.findall(r"<canvas[\s>]", text, re.IGNORECASE))

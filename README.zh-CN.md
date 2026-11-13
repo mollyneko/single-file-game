@@ -1,6 +1,6 @@
 # Single-File Game
 
-**用一个 HTML 文件做出完整、可玩的浏览器游戏。零素材、零构建、运行时零网络。**
+**用一个 HTML 文件做出完整、可玩的浏览器游戏。默认 3D、3A 级观感。零素材、零构建、运行时零网络。**
 
 [![validate](https://github.com/mollyneko/single-file-game/actions/workflows/validate.yml/badge.svg)](https://github.com/mollyneko/single-file-game/actions/workflows/validate.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-2f4b3f.svg)](LICENSE)
@@ -20,14 +20,23 @@
 这不是"如何做游戏"的教程。它是一套可执行的方法，加上强制这套方法的工具链，从真实的单文件游戏中
 提炼，只保留真正起作用的部分。
 
-| 2D 模板（生成即用） | 3D —— 用它做出来的游戏 |
-| --- | --- |
-| ![2D 模板](docs/starter-2d.png) | ![3D 游戏](docs/game-3d.png) |
-| Canvas 2D · 28 KB · 收集、闪避、计分、存档 | WebGL2 · 140 KB · 开放地形、HDR、软阴影、体积光 |
+**默认交付 3D。** 2D 是需要明确提出才走的路线，不是默认退路。
 
-左图是 `assets/starter-2d.html` 从生成器里出来的原样。右图是照同一套规则做出来的完整游戏：
-单文件，地形和角色都在运行时生成，磁盘上没有一张贴图。两张都在断网状态下用 `file://` 直接
-运行，画面里没有一个图片文件。
+| 2D —— 可选路线，一个完整游戏 | 3D —— 默认路线，一个完整游戏 |
+| --- | --- |
+| ![2D 游戏](docs/game-2d.png) | ![3D 游戏](docs/game-3d.png) |
+| Canvas 2D · 189 KB · 3840×3840 世界、四人小队、元素反应、任务链 | WebGL2 · 140 KB · 开放地形、HDR、软阴影、体积光 |
+
+两张都是照同一套规则做出来的完整游戏：各自单文件，地形、角色、道具全在运行时生成，磁盘上没有
+贴图。两张都在断网状态下用 `file://` 直接运行，画面里没有一个图片文件——左图的世界完全由 canvas
+调用画出，右图是带手写后处理链的实时 WebGL2 渲染。
+
+### 按六个维度评判
+
+**空间、光照、材质、反射、世界细节、性能预算。** 相机在场景内部、一个太阳带真实阴影、材质带磨损与
+接缝、反射与地平线一致、表面带着没人会去读的信息、字节花在资产上而不是重写引擎。六条里缺三条，
+无论功能列表多长都还是原型。每条的下限、数字与它防止的具体失败：
+[`SKILL.md`](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes)。
 
 ## 单文件不等于原型画质
 
@@ -39,6 +48,10 @@
         →  SSAO + 双边模糊  →  Bloom 金字塔  →  ACES + 调色
         →  sRGB 编码  →  FXAA + 胶片颗粒
 ```
+
+> 模板是故意手写渲染器的——75 KB 里能一次看完全部 pass，代价是工艺门禁只有 `2/4`。
+> 真正要交付的 3D 游戏不该这么花预算：先内联引擎，再把字节花到资产上
+> （[`references/asset-craft.md`](references/asset-craft.md)）。
 
 具体换来什么：
 
