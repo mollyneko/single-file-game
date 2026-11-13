@@ -269,6 +269,9 @@ function footstep() {
 /* ------------------------------- input ------------------------------- */
 const keys = new Set();
 const look = { dx: 0, dy: 0 };
+/* HARD CONSTRAINT (SKILL.md 2A.C): mouse look is free-look. No drag, no click gate. */
+const FREE_LOOK = true;
+let lastX = 0, lastY = 0, hasLast = false;
 let drag = null, touchStick = null, stickVec = { x: 0, y: 0 };
 
 addEventListener('keydown', e => {
@@ -277,11 +280,12 @@ addEventListener('keydown', e => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
 });
 addEventListener('keyup', e => keys.delete(e.code));
-addEventListener('blur', () => keys.clear());
+addEventListener('blur', () => { keys.clear(); hasLast = false; });
 
 cv.addEventListener('pointerdown', e => {
   audioInit();
   cv.focus({ preventScroll: true });
+  lastX = e.clientX; lastY = e.clientY; hasLast = true;
   if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.45 && !touchStick) {
     touchStick = { id: e.pointerId, x: e.clientX, y: e.clientY };
     const s = $('#stick');
@@ -290,7 +294,8 @@ cv.addEventListener('pointerdown', e => {
     s.style.top = e.clientY + 'px';
     return;
   }
-  drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  // Touch still drags the right half; mouse never needs a drag to look around.
+  if (e.pointerType === 'touch') drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
 });
 
 cv.addEventListener('pointermove', e => {
@@ -302,10 +307,18 @@ cv.addEventListener('pointermove', e => {
       ((dy / d) * r * 34).toFixed(1) + 'px)';
     return;
   }
-  if (!drag || e.pointerId !== drag.id) return;
-  look.dx += e.clientX - drag.x;
-  look.dy += e.clientY - drag.y;
-  drag.x = e.clientX; drag.y = e.clientY;
+  if (e.pointerType === 'touch') {
+    if (!drag || e.pointerId !== drag.id) return;
+    look.dx += e.clientX - drag.x;
+    look.dy += e.clientY - drag.y;
+    drag.x = e.clientX; drag.y = e.clientY;
+    return;
+  }
+  // Mouse: the very first movement turns the camera, with no button held.
+  if (!hasLast) { lastX = e.clientX; lastY = e.clientY; hasLast = true; }
+  look.dx += e.movementX || (e.clientX - lastX);
+  look.dy += e.movementY || (e.clientY - lastY);
+  lastX = e.clientX; lastY = e.clientY;
 });
 
 function endPointer(e) {

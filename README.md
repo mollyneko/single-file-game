@@ -45,6 +45,23 @@ re-inventing the engine. Miss three of them and the result is a prototype howeve
 feature list is. Floors, numbers and the failure each axis prevents:
 [`SKILL.md`](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes).
 
+### Three hard constraints (MUST)
+
+Enforced by `--strict --craft` and on screen — see
+[`SKILL.md` §2A](SKILL.md#2a-three-hard-constraints-must):
+
+1. **Visual self-review with a repair loop.** ≥ 2 rounds of real headless screenshots (title,
+   gameplay, **upscaled character close-up**, hero effect), a written score on the six axes plus
+   beauty / structural plausibility / UI readability, every below-floor item repaired, and the
+   same shots re-captured. A detached hand is a failed build: the usual cause is absolute bone
+   positions in a parent-relative skeleton. [Review guide](references/visual-self-review.md).
+2. **SSAO and depth-aware volumetrics in every 3D scene.** Hemisphere AO rebuilt from the scene
+   depth texture and applied to ambient only, plus a shadow-tested ray march that terminates at
+   scene depth. A radial bright-pass streak or vertex AO does not count.
+3. **Free-look mouse by default.** Moving the mouse turns the camera with no button held and no
+   drag. Drag-to-look only when the brief explicitly asks for it (`DRAG_LOOK_OPT_IN`); pointer
+   lock is an optional enhancement. Touch still drags on the right half.
+
 ## It has to look shipped
 
 A single file is a constraint, not an excuse for a grey prototype. The 3D starter is the
@@ -148,11 +165,12 @@ single-file-game/
 │   ├── material-authoring.md   PBR channels, wear, seams, triplanar, water, baking
 │   ├── game-feel.md            hitstop, shake, easing, particles, audio layering, HUD motion
 │   ├── procedural-audio.md     SFX bus, noise, step-sequenced music, mixing
-│   ├── input-and-mobile.md     one intent object, touch sticks, pointer lock, safe areas
+│   ├── input-and-mobile.md     one intent object, free-look mouse, touch sticks, safe areas
 │   ├── state-and-persistence.md  save shape, versioning, migration, autosave
 │   ├── performance.md          frame budget, baking, pooling, adaptive quality
 │   ├── resilience-and-a11y.md  error boundary, degradation ladder, reduced motion
 │   ├── design-language.md      tokens, type scale, buttons, HUD composition
+│   ├── visual-self-review.md   shot → score → repair → re-shoot loop, rig checklist
 │   └── release-checklist.md    the ship gate
 ├── assets/
 │   ├── starter-2d.html         runnable canvas game shell
@@ -174,7 +192,9 @@ single-file-game/
    then the post chain. Check the sRGB encode before touching exposure.
 5. **Content as data.** Tables plus a seeded generator, not hand-authored instances.
 6. **Feel on purpose.** Shake, particles, pops, ticks, idle motion — all cheap, all checked.
-7. **Audit.** `check_single_file.py --strict`, plus `--craft` for 3D, then walk the release checklist.
+7. **Self-review, repair, re-shoot, then audit.** ≥ 2 screenshot rounds with a character
+   close-up, nine axes scored in writing; then `check_single_file.py --strict --craft`
+   (asset craft **and** the three hard constraints) and the release checklist.
 
 Full reasoning in [`docs/method.md`](docs/method.md); operational detail in
 [`SKILL.md`](SKILL.md).
@@ -185,7 +205,7 @@ Full reasoning in [`docs/method.md`](docs/method.md); operational detail in
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | Copies a template, sets the title, boot mark, save namespace and accent colour |
 | `python scripts/check_single_file.py X.html --strict` | Fails on remote resources, network calls, missing shell parts, dangling element IDs, oversized files |
-| `python scripts/check_single_file.py X.html --strict --craft` | 3D ship gate: fails on missing geometry craft, material library, generated textures or skinning |
+| `python scripts/check_single_file.py X.html --strict --craft` | 3D ship gates: fails on missing geometry craft, material library, generated textures or skinning, **and** on missing SSAO, depth-aware volumetrics, free-look mouse or a `SELF-REVIEW` record (`4/4` on each gate) |
 | `python -m unittest discover -s tests -v` | Tests the auditor and the scaffolder against known-good and known-bad files |
 
 The auditor is the point of the toolchain. It catches the mistakes that this format makes

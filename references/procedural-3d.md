@@ -61,9 +61,15 @@ function program(vs, fs, name = 'prog'){
 
 ```
 sky (fullscreen, generated)  ->  shadow depth pass  ->  main pass into HDR target
-  ->  bloom (optional, half-res)  ->  composite: exposure, tonemap, grade, vignette,
-      grain, dither, FXAA  ->  present
+  with a sampleable depth texture  ->  half-res volumetric ray march (MUST)
+  ->  half-res SSAO + depth-aware blur (MUST)  ->  bloom pyramid
+  ->  composite: exposure, tonemap, grade, vignette, grain, dither, FXAA  ->  present
 ```
+
+The two atmosphere passes are `SKILL.md` §2A.B hard constraints. Render the HDR scene into a
+target with a `DepthTexture` (and `samples = 0` — MSAA does not resolve reliably into a
+sampleable depth texture); reconstruct view-space positions and normals from it in both passes.
+See `references/cinematic-look.md` §5A for the contracts.
 
 The composite pass is where the "look" lives. Render the world to an offscreen target in
 linear space, then run one fullscreen shader over it. Do not tone map per-material.
@@ -136,6 +142,9 @@ integer so edges match; use 3–4 octaves, not 8.
 
 One camera object with position, yaw, pitch, fov. Movement is intent-driven
 (`move.x`, `move.z`, `look.dx`, `look.dy`), never read from a keyboard inside the camera.
+Mouse look is **free-look by default**: a `pointermove` handler writes `look.dx/dy`
+unconditionally, with no drag gate and no click-to-capture requirement
+(`SKILL.md` §2A.C, `references/input-and-mobile.md`).
 
 ```js
 yaw   -= look.dx * sens;
@@ -168,12 +177,15 @@ renderer.
 
 ```js
 const TIERS = {
-  low:    { dpr:1.0,  shadow:1024, taps:10, aa:0, ao:false, bloom:false, volSteps:0,  drawDist:90  },
-  medium: { dpr:1.25, shadow:1024, taps:12, aa:1, ao:true,  bloom:true,  volSteps:8,  drawDist:140 },
-  high:   { dpr:1.5,  shadow:2048, taps:16, aa:1, ao:true,  bloom:true,  volSteps:12, drawDist:200 },
-  ultra:  { dpr:2.0,  shadow:2048, taps:16, aa:1, ao:true,  bloom:true,  volSteps:16, drawDist:260 },
+  low:    { dpr:1.0,  shadow:1024, taps:10, aa:0, ao:true, aoSamples:8,  bloom:false, volSteps:8,  drawDist:90  },
+  medium: { dpr:1.25, shadow:1024, taps:12, aa:1, ao:true, aoSamples:12, bloom:true,  volSteps:12, drawDist:140 },
+  high:   { dpr:1.5,  shadow:2048, taps:16, aa:1, ao:true, aoSamples:16, bloom:true,  volSteps:20, drawDist:200 },
+  ultra:  { dpr:2.0,  shadow:2048, taps:16, aa:1, ao:true, aoSamples:16, bloom:true,  volSteps:24, drawDist:260 },
 };
 ```
+
+`ao` and `volSteps` are **never 0/false** on a shipped build: §2A.B requires both passes at
+every tier. Degrade by reducing samples/steps/resolution, not by deleting the pass.
 
 - `dpr = Math.min(devicePixelRatio || 1, 2) * tier.dpr / 1.5` — never render a 3x phone at
   native resolution; the fill cost quadruples for no visible gain.

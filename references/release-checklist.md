@@ -10,6 +10,13 @@ to happen.
 - [ ] 2D was not chosen because 3D was hard, and an inline engine was not rejected to keep the
       file small.
 - [ ] The six axes in `SKILL.md` §1 were scored explicitly, and at most one is below its floor.
+- [ ] The three hard constraints in `SKILL.md` §2A are declared: SSAO **and** depth-aware
+      volumetrics in the shipped pipeline, free-look mouse by default (or
+      `DRAG_LOOK_OPT_IN` because the brief asked for drag), and ≥ 2 self-review rounds with
+      re-shots.
+- [ ] All **nine** axes (six ship axes + beauty / structural plausibility / UI readability)
+      were scored **on screenshots**, not on code; none is below its floor. See
+      `references/visual-self-review.md`.
 
 ## 1. Format audit
 
@@ -19,8 +26,11 @@ python scripts/check_single_file.py path/to/game.html --strict --craft   # 3D de
 ```
 
 `--craft` is **mandatory** for a shipped 3D game: it fails on missing geometry craft, a
-missing named material library, missing generated textures, or bones without skinning.
-Starters and in-progress scaffolds are exempt. See `references/asset-craft.md`.
+missing named material library, missing generated textures, bones without skinning, **missing
+SSAO, missing depth-aware volumetrics, drag-gated mouse look, or no `SELF-REVIEW` record**.
+The craft groups and the hard constraints are reported separately (`4/4` and `4/4`); a file
+needs both. Starters and in-progress scaffolds are exempt. See `references/asset-craft.md`
+and `references/visual-self-review.md`.
 
 A 2D deliverable is audited with `--strict` alone; `--craft` on a non-3D file reports that the
 gate was skipped. The bundled `assets/starter-3d.html` reports `2/4`: it is a shell, and building
@@ -49,7 +59,10 @@ Manual confirmation of what the script cannot see:
 
 - [ ] Keyboard: all actions reachable, no browser shortcut collisions.
 - [ ] Window blur stops movement (no "running forever" bug).
-- [ ] Mouse and touch both work; pointer-lock failure falls back to drag.
+- [ ] **Mouse movement turns the camera with no button held and no drag** (`FREE_LOOK`).
+      Pointer lock, if present, is an optional enhancement; play never waits for a click.
+      `DRAG_LOOK_OPT_IN` is present only if the brief explicitly asked for drag controls.
+- [ ] Touch look works on the right half; the left half remains the virtual stick.
 - [ ] Touch targets ≥ 44 px, no overlap, thumbs do not cover critical HUD.
 - [ ] Gamepad dead zone applied; no drift.
 - [ ] Controls are documented in-game, not only in the README.
@@ -124,6 +137,25 @@ Starters are exempt; a deliverable is not. Confirm each one on screen, not just 
 - [ ] A material calibration row (roughness sweep × metalness 0/1) was inspected in frame.
 - [ ] `--strict --craft` reports `3D asset-craft signals: 4/4`.
 
+## 12. Hard constraints and visual self-review (3D deliverables only)
+
+- [ ] `check_single_file.py --strict --craft` reports `3D hard constraints: 4/4`
+      (SSAO, depth-aware volumetrics, free-look, `SELF-REVIEW` record with ≥ 2 rounds).
+- [ ] SSAO is rebuilt from a **scene depth texture**, hemisphere-sampled, depth-blurred, and
+      applied to ambient radiance only — visible at crevices and contacts on screen.
+- [ ] Volumetrics ray-march to **scene depth**, are shadow-map tested, and shafts are visibly
+      blocked by a pillar or tree. A radial bright-pass streak does not pass this box.
+- [ ] Both passes still run (at reduced step/sample count) on the lowest quality tier.
+- [ ] At least **two** review rounds were completed, each with: title, gameplay wide,
+      **upscaled character close-up**, and hero-effect screenshots.
+- [ ] The close-up shows a connected body: shoulder → upper arm → elbow → forearm → wrist →
+      hand, hips → thigh → knee → shin → foot, head → neck, on **both** sides.
+- [ ] At least one **animated** frame (walk / attack / jump) was inspected at the same zoom;
+      no joint separates and no limb rotates around a distant pivot.
+- [ ] Every below-floor axis was repaired and the **same shot re-captured**; the handoff names
+      the fixes with before/after evidence.
+- [ ] HUD stays legible over the 3D world; no panel overlaps the character.
+
 ## Red flags that mean "not done"
 
 - A 3D brief answered with a fixed-zoom top-down canvas scene.
@@ -134,3 +166,9 @@ Starters are exempt; a deliverable is not. Confirm each one on screen, not just 
 - `requestAnimationFrame` started twice (double speed / double CPU).
 - Panels that stay in the DOM and capture clicks after closing.
 - A score that resets because the save key is different from the load key.
+- A radial "god ray" blur presented as volumetrics, or vertex AO presented as SSAO.
+- A camera that does nothing until the player drags or clicks to capture the pointer.
+- A character whose hands float next to the sleeves — especially one that only breaks while
+  animating (absolute bone positions in a parent-relative skeleton).
+- A self-review with one round, no close-up, or no re-shot after the fix.
+- A `SELF-REVIEW` marker claiming 5/5 while the screenshots show otherwise.

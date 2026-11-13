@@ -12,7 +12,12 @@ looks like.
 
 ```
 shadow map  ->  HDR scene  ->  volumetrics  ->  AO  ->  bloom  ->  tone map  ->  grade  ->  encode
+                                  ^^^ MUST        ^^^ MUST   (SKILL.md §2A.B)
 ```
+
+Both atmosphere stages are **hard constraints**, not polish. A 3D deliverable without SSAO and
+depth-aware volumetrics fails `--craft`. Build the depth texture on the scene target in the
+renderer step, before content.
 
 Every stage assumes the one before it:
 
@@ -92,9 +97,13 @@ Three rules:
 Long shadows are the cheapest drama in the medium. A 12 m pillar at 12° casts a 56 m shadow:
 one instanced box, one shadow lookup, a huge compositional element.
 
-## 4. Volumetrics: the difference between "3D" and "atmospheric"
+## 4. Volumetrics: the difference between "3D" and "atmospheric" — MUST
 
-One half-resolution raymarch with 16–24 steps, shadow-tested, phase-weighted:
+**Required in every 3D deliverable** (`SKILL.md` §2A.B). One half-resolution raymarch with 16–24
+steps, shadow-tested, phase-weighted, terminating at scene depth. Not optional, not a tier-only
+feature: the low tier may use 8 steps or quarter resolution, but the pass must exist and run.
+
+The core loop, in linear HDR:
 
 ```glsl
 float g = 0.72;                                   // forward scattering
@@ -114,7 +123,13 @@ the shafts read. Jitter the start with interleaved gradient noise so 20 steps do
 Upsample with a depth-weighted 4-tap, never plain bilinear: a half-res buffer stretched over
 a silhouette leaks light through geometry.
 
-## 5. AO: contact, not dirt
+## 5. AO: contact, not dirt — MUST
+
+**Required in every 3D deliverable** (`SKILL.md` §2A.B): screen-space ambient occlusion rebuilt
+from the scene's **depth texture**, hemisphere sampling and a depth-aware blur. Vertex AO, baked
+AO in the albedo, or a painted ellipse under the feet do not satisfy it. Apply to ambient /
+indirect radiance only, at 0.6–0.8 strength; never multiply the whole frame. Low tier may drop
+sample count or resolution.
 
 Half-res SSAO, 12 hemisphere samples, 0.4–0.6 m radius, then a depth-aware 7-tap blur. Two
 things matter more than the sampler:
@@ -125,6 +140,37 @@ things matter more than the sampler:
 
 AO is subtle by design. If you can point at it, it is too strong. `0.6–0.8` strength in the
 composite, never `1.0`.
+
+## 5A. Implementation contracts (and what does not count)
+
+Neither pass is satisfied by a lookalike. `--craft` looks for the signals, but the screenshot
+is what proves it.
+
+| Pass | Counts | Does **not** count |
+| --- | --- | --- |
+| SSAO | depth texture → view-space position → hemisphere samples → depth-aware blur → ambient-only multiply | vertex AO, AO baked into albedo, a radial gradient under an object, simply darkening the final image |
+| Volumetrics | view-ray ray march to **scene depth**, density integrated, HG phase, **shadow-map test** per step, `col = col*T + scatter` | radial blur of the bright buffer, sun-disk streaks, a fog quad, height fog alone |
+
+Wiring in an inlined engine (three.js r149-style):
+
+- Attach a `DepthTexture` to the HDR scene target. **Do not combine it with MSAA `samples > 0`**
+  — a multisampled framebuffer does not reliably resolve into a sampleable depth texture. Set
+  `samples = 0` and add a cheap FXAA in the composite instead.
+- Reconstruct view space from the non-linear depth: `ndc = vec4(uv*2-1, d*2-1, 1)`,
+  `view = uProjInv * ndc; view /= view.w`. World space is `uViewInv * vec4(view,1)`.
+- Reconstruct normals from neighbouring depth samples (`cross(pUp-p, pRight-p)`) — no MRT or
+  derivative extension needed. Skip pixels with `d == 1.0` (sky).
+- For the volumetric shadow test, project each step with the engine's shadow matrix
+  (`light.shadow.matrix`), sample the packed shadow map with `unpackRGBAToDepth`, and compare.
+  Blend `lit` toward an ambient floor rather than hard 0/1 so a packing mismatch degrades to
+  soft haze instead of a black frame.
+- Jitter the march start with interleaved gradient noise; upsample with a depth-weighted tap.
+- Composite in order: `hdr = hdr * T + scatter`, then `hdr *= mix(1.0, ao, strength *
+  (1.0 - smoothstep(...luma(hdr))))`, then bloom, ACES, grade, sRGB encode.
+
+Both passes run at half (or quarter) resolution into their own targets; on a low tier reduce
+steps and samples, never delete the passes. Budget from the starter still applies:
+volumetrics 20 steps ≈ 1.2 ms, SSAO half res ≈ 0.5 ms at 1280×800 on integrated graphics.
 
 ## 6. Bloom: a pyramid, not a blur
 
@@ -215,5 +261,10 @@ Open the file and look for ten seconds. Then answer:
 6. Is there atmosphere between you and the far plane?
 7. Does anything move that is not gameplay?
 8. Do the highlights roll off instead of clipping?
+9. Do crevices and contact points darken (SSAO), and do shafts stop at a pillar instead of
+   shining through it (depth-aware volumetrics)?
+10. Does the camera turn when the mouse simply moves — no drag, no click to capture?
 
-Two "no"s is a prototype. Fix those two, look again.
+Two "no"s is a prototype. Fix those two, look again. A "no" on 9 or 10 is a §2A failure and
+blocks the ship gate regardless of the other eight. Then review the character close-up per
+`references/visual-self-review.md`: a good frame with a detached hand is still not done.

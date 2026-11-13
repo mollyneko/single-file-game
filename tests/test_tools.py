@@ -5,6 +5,7 @@ Run: python -m unittest discover -s tests -v
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -48,6 +49,24 @@ function draw(){ boxGeom(); sphereGeom(); capsuleGeom(); }
 </script></body></html>
 """
 
+REVIEW = """<!-- SELF-REVIEW {"rounds":2,
+  "shots":["title","play","char-closeup","hero-effect"],
+  "axes":{"space":5,"light":4,"material":5,"reflection":4,"world":4,"budget":4,
+          "beauty":4,"structure":5,"ui":5},
+  "fixes":["rig: parent-relative bone offsets","SSAO + volumetric ray march"],
+  "reshoot":true} -->"""
+
+# Section 2A hard-constraint signals: depth-based SSAO, depth-aware volumetrics,
+# free-look mouse and the review marker above.
+HARD_SNIPPET = """const FREE_LOOK = true;
+const ssaoSamples = 12, aoRadius = 0.5;
+const sceneDepth = new DepthTexture(2, 2);   // SSAO rebuilt from scene depth
+function ssaoPass(){ /* hemisphere samples, depth-aware blur */ }
+const uSigma = 0.008, uShadow = null;
+function volumetricRayMarch(){ /* shadow-tested march: scatter + transmittance */ }
+cv.addEventListener('pointermove', e => { look.dx += e.clientX - lastX; });
+"""
+
 CRAFT_3D = BARE_3D.replace(
     "const shader = gl.createShader(gl.VERTEX_SHADER);",
     """const shader = gl.createShader(gl.VERTEX_SHADER);
@@ -62,7 +81,10 @@ const ctx = cvs.getContext('2d');
 const tex = new CanvasTexture(cvs);
 const mesh = new SkinnedMesh(geo, bones);
 mesh.bind(new Skeleton(bones));""",
-)
+).replace("</head>", REVIEW + "\n</head>").replace("<script>", "<script>\n" + HARD_SNIPPET)
+
+# Asset craft is complete, but none of the four hard constraints are present.
+CRAFT_ONLY_3D = CRAFT_3D.replace(HARD_SNIPPET, "").replace(REVIEW, "")
 
 
 def run(script: Path, *args: str) -> subprocess.CompletedProcess:
@@ -157,6 +179,90 @@ class AuditTests(unittest.TestCase):
         big = GOOD + "<!--" + "x" * (1500 * 1024) + "-->"
         result = self.audit(big, "--strict")
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    # --- section 2A hard constraints ------------------------------------
+    def test_hard_constraints_reject_craft_only_3d(self):
+        result = self.audit(CRAFT_ONLY_3D, "--strict", "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        for group in ("depth-based SSAO", "depth-aware volumetrics",
+                      "free-look mouse", "visual self-review"):
+            self.assertIn(group, result.stdout)
+
+    def test_both_3d_gates_pass_when_present(self):
+        result = self.audit(CRAFT_3D, "--strict", "--craft")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("3D asset-craft signals: 4/4", result.stdout)
+        self.assertIn("3D hard constraints: 4/4", result.stdout)
+
+    def test_ssao_needs_a_sampled_depth_source(self):
+        bad = CRAFT_3D.replace("new DepthTexture(2, 2)", "null")
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("depth-based SSAO", result.stdout)
+
+    def test_free_look_marker_needs_a_move_handler(self):
+        bad = CRAFT_3D.replace(
+            "cv.addEventListener('pointermove', e => { look.dx += e.clientX - lastX; });", ""
+        )
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("free-look mouse", result.stdout)
+
+    def test_explicit_drag_opt_in_is_allowed(self):
+        html = CRAFT_3D.replace("const FREE_LOOK = true;", "const DRAG_LOOK_OPT_IN = true;")
+        self.assertEqual(self.audit(html, "--strict", "--craft").returncode, 0)
+
+    def test_self_review_requires_two_rounds(self):
+        bad = CRAFT_3D.replace('"rounds":2', '"rounds":1')
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("rounds < 2", result.stdout)
+
+    def test_self_review_requires_character_closeup(self):
+        bad = CRAFT_3D.replace('"char-closeup"', '"wide"')
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("character close-up", result.stdout)
+
+    def test_self_review_requires_fixes_and_reshoot(self):
+        bad = CRAFT_3D.replace('"reshoot":true', '"reshoot":false')
+        self.assertEqual(self.audit(bad, "--craft").returncode, 1)
+        no_fixes = REVIEW.replace(
+            '"fixes":["rig: parent-relative bone offsets","SSAO + volumetric ray march"]',
+            '"fixes":[]',
+        )
+        bad2 = CRAFT_3D.replace(REVIEW, no_fixes)
+        result = self.audit(bad2, "--craft")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no recorded fixes", result.stdout)
+
+    def test_hard_constraints_not_enforced_without_craft(self):
+        result = self.audit(CRAFT_ONLY_3D, "--strict")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("not enforced", result.stdout)
+
+    def test_inline_engine_words_do_not_satisfy_hard_gate(self):
+        # A minified engine line naturally contains DepthTexture / shadowMap /
+        # transmittance. Those words must not be mistaken for game-side passes.
+        noise = "/* " + "DepthTexture shadowMap transmittance SSAO uSigma volumetric " * 120 + " */"
+        html = CRAFT_ONLY_3D.replace(
+            "<script>",
+            "<script>\n" + noise
+            + "\nconst FREE_LOOK = true;\n"
+            + "cv.addEventListener('pointermove', e => { look.dx += e.movementX; });",
+        ).replace("</head>", REVIEW + "\n</head>")
+        result = self.audit(html, "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("3D hard constraints: 2/4", result.stdout)
+        self.assertIn("depth-based SSAO", result.stdout)
+        self.assertIn("depth-aware volumetrics", result.stdout)
+
+    def test_json_reports_hard_gates(self):
+        result = self.audit(CRAFT_3D, "--json", "--craft")
+        payload = json.loads(result.stdout)[0]
+        self.assertEqual(len(payload["hard_hits"]), 4)
+        self.assertEqual(payload["hard_missing"], [])
+        self.assertTrue(payload["ok"])
 
 
 class ScaffoldTests(unittest.TestCase):

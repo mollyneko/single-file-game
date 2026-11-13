@@ -38,6 +38,20 @@
 无论功能列表多长都还是原型。每条的下限、数字与它防止的具体失败：
 [`SKILL.md`](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes)。
 
+## 三条强制约束（MUST）
+
+由 `--strict --craft` 与实拍截图共同把关，详见
+[`SKILL.md` §2A](SKILL.md#2a-three-hard-constraints-must)：
+
+1. **视觉自评 + 修复闭环。** 至少两轮无头浏览器实拍（标题、实机、**放大后的角色特写**、主特效），
+   按六轴加上美观度／结构合理性／UI 可读性共九轴书面打分，修掉所有不达标项，并复拍同一组画面。
+   手没连到身体即判定失败——常见原因是把骨骼的绝对坐标当成父骨骼相对偏移写进了骨架。
+   详见[自评规范](references/visual-self-review.md)。
+2. **3D 场景必须有 SSAO 与深度感知体积光。** SSAO 由场景深度纹理重建半球遮蔽，只作用于环境光；
+   体积光沿视线步进、按阴影贴图判定遮挡、在场景深度处终止。径向亮部拖影与顶点 AO 都不算。
+3. **鼠标默认自由视角。** 移动鼠标直接转视角，不需要按住按键、不需要拖动。只有用户明确要求拖动
+   时才使用 `DRAG_LOOK_OPT_IN`；指针锁定只是可选增强。触屏仍在右半屏拖动。
+
 ## 单文件不等于原型画质
 
 单文件是约束，不是交出灰色方块的理由。3D 模板就是一套从零手写的小型电影级渲染管线的参考实现，
@@ -136,11 +150,12 @@ single-file-game/
 │   ├── material-authoring.md   PBR 通道、磨损、接缝、三平面投影、水面、烘焙
 │   ├── game-feel.md            顿帧、抖动、缓动、粒子、音频分层、HUD 动效
 │   ├── procedural-audio.md     SFX 总线、噪声、步进音乐、混音
-│   ├── input-and-mobile.md     统一输入意图、触屏摇杆、指针锁定、安全区
+│   ├── input-and-mobile.md     统一输入意图、鼠标自由视角、触屏摇杆、安全区
 │   ├── state-and-persistence.md 存档结构、版本、迁移、自动保存
 │   ├── performance.md          帧预算、烘焙、对象池、自适应画质
 │   ├── resilience-and-a11y.md  错误兜底、降级阶梯、减少动效
 │   ├── design-language.md      设计变量、字号阶梯、按钮、HUD 构图
+│   ├── visual-self-review.md   实拍 → 打分 → 修复 → 复拍闭环、肢体连接检查表
 │   └── release-checklist.md    发布前检查清单
 ├── assets/
 │   ├── starter-2d.html         可直接运行的 Canvas 游戏壳
@@ -162,7 +177,8 @@ single-file-game/
    编码，再动曝光。
 5. **内容即数据。** 表格加种子生成器，而不是手写一个个实例。
 6. **手感要刻意设计。** 抖动、粒子、弹跳、点击音、待机动画——成本很低，全部列成清单。
-7. **审计交付。** `check_single_file.py --strict`，3D 再加 `--craft`，然后走发布检查清单。
+7. **自评、修复、复拍，再审计。** 至少两轮实拍（含角色放大特写）、九轴书面打分，然后跑
+   `check_single_file.py --strict --craft`（资产工艺 + 三条强制约束）与发布检查清单。
 
 完整论证见 [`docs/method.md`](docs/method.md)，操作细节见 [`SKILL.md`](SKILL.md)。
 
@@ -172,7 +188,7 @@ single-file-game/
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | 复制模板，写入标题、启动标识、存档命名空间与强调色 |
 | `python scripts/check_single_file.py X.html --strict` | 对远程资源、网络调用、缺失的壳部件、悬空元素 ID、超大文件直接判失败 |
-| `python scripts/check_single_file.py X.html --strict --craft` | 3D 交付硬门槛：缺几何工艺、具名材质库、生成贴图或连续蒙皮即失败 |
+| `python scripts/check_single_file.py X.html --strict --craft` | 3D 交付硬门槛：缺几何工艺、具名材质库、生成贴图、连续蒙皮，或缺 SSAO、深度感知体积光、鼠标自由视角、`SELF-REVIEW` 记录即失败（两道门禁各需 `4/4`） |
 | `python -m unittest discover -s tests -v` | 用已知好/坏文件测试审计器与脚手架 |
 
 审计器是这条工具链的重点。它专门抓这个格式最容易犯的错：为图省事加上的 `<script src>`、忘了删的

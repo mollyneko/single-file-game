@@ -78,15 +78,76 @@ Non-negotiable. Violating one breaks the format.
 6. **Input parity from commit one.** Keyboard, pointer, touch and gamepad resolve into one intent
    object. Mobile is not a later milestone.
 
+## 2A. Three hard constraints (MUST)
+
+These outrank scope, taste and time. A build missing one is not shippable, however good the
+rest of it is. They are machine-checked where possible (`--craft`) and always checked on screen.
+
+### A. Visual self-review, with a repair loop — not a score written at the end
+
+Once the build first renders, run **at least two review rounds**. Each round is:
+
+1. **Capture real frames.** Headless-browser screenshots of the title, a gameplay wide shot,
+   a **zoomed crop of the playable character** (full-frame shots hide broken rigs), and the
+   most expensive effect in the scene (water / sunset / boss). Never review from source or
+   memory.
+2. **Score in writing** the six axes in §1 **plus** the three review axes in
+   `references/visual-self-review.md`: beauty/composition, structural plausibility, UI
+   readability. Below-floor is a defect, not a taste difference.
+3. **Repair every defect**, worst first, then **re-capture the same shots** and compare. A fix
+   without a re-shot is an unverified claim.
+4. Record rounds, scores, fixes and re-shot evidence in the handoff and in the `SELF-REVIEW`
+   marker the auditor looks for.
+
+**Structural plausibility is a hard gate.** A humanoid must read as one connected body at rest
+*and through every animation*: shoulders joined to the torso, upper arm → elbow → forearm →
+wrist → hand continuous, hips → thigh → knee → shin → ankle → foot continuous, head joined to
+the neck. No floating hands, detached sleeves, gaps that open when a bone rotates, or limbs
+clipping through cape and weapon. Verify on a zoomed idle frame **and** an animated frame
+(walk / attack / jump). The classic cause in this skill's own output: bone transforms authored
+as *absolute* positions in a hierarchy that expects *parent-relative* offsets — the bind pose
+looks right, then the first rotation throws the arm metres away. Rig checklist and repair
+recipes: `references/visual-self-review.md`.
+
+"Looks fine" is not evidence. A screenshot, a score and a re-shot are.
+
+### B. SSAO and volumetrics are mandatory in every 3D scene
+
+A 3D deliverable MUST ship both, not one, not a lookalike:
+
+- **SSAO** rebuilt from scene depth (normals from neighbouring depth samples is fine),
+  hemisphere sampling, depth-aware blur, applied to **ambient/indirect radiance only** — never
+  by multiplying the whole frame. Half resolution is fine; switching it off on the low tier
+  is fine.
+- **Volumetric light** as depth-aware **ray marching**, not a radial blur of the bright buffer.
+  The march terminates at scene depth, integrates density along the view ray, weights by a
+  phase function, and tests the sun's shadow map so geometry actually blocks shafts. Output
+  scatter + transmittance, composite as `col * T + scatter`.
+
+A radial "god ray" streak is **not** volumetrics. Vertex AO or a painted contact shadow is
+**not** SSAO. Order is `shadow → HDR scene → volumetrics → AO → bloom → tone map → grade →
+encode` (`references/cinematic-look.md`). `--craft` fails without both signals.
+
+### C. Mouse look is free-look by default
+
+Moving the mouse MUST turn the camera immediately, with no button held: the
+`mousemove`/`pointermove` handler writes `look.dx/dy` unconditionally over the canvas.
+**Drag-to-look is opt-in** — use it only when the user explicitly asks for drag controls, and
+mark that file with `DRAG_LOOK_OPT_IN`. Pointer lock is an optional enhancement (a click may
+capture the pointer for infinite travel); it must never be the only way to look around, and
+play must never wait for a click before the camera responds. Touch still drags on the right
+half of the screen — different device, different rule. See `references/input-and-mobile.md`.
+
 ## 3. Ship gates
 
-Three gates. The third is the one people skip, and it is the one being judged.
+Four gates. The last two are the ones people skip, and they are the ones being judged.
 
 | Gate | Act | Fails on |
 | --- | --- | --- |
 | **Format** | `python scripts/check_single_file.py game.html --strict` | external references, network calls, missing `id`s, missing `<title>`/viewport, no error boundary |
 | **Craft** (3D) | same command `--strict --craft` | bare primitives as final assets, RGB-only palettes, untextured surfaces, bones without skinning |
-| **Frame** | score §1's six axes, then walk `references/release-checklist.md` | a frame that reads as a prototype |
+| **Hard constraints** (3D) | same `--strict --craft` run, plus screenshot evidence | missing SSAO, missing depth-aware volumetrics, drag-gated mouse look, no recorded self-review |
+| **Frame** | score §1's six axes **and** §2A's three review axes, then walk `references/release-checklist.md` | a frame that reads as a prototype, a disconnected limb, or a camera that needs a drag |
 
 The craft gate in six lines, for 3D deliverables (starters exempt; a shipped file is not). The
 bundled `assets/starter-3d.html` reports `2/4` — it is a shell, and its asset layer is your first
@@ -105,6 +166,12 @@ task:
 
 `references/asset-craft.md` holds the evidence, the `--craft` signal groups and the catch-up
 order.
+
+The same `--craft` run also enforces §2A. It reports `3D hard constraints: n/4` — SSAO,
+depth-aware volumetrics, free-look mouse, and a `SELF-REVIEW` record with ≥2 rounds. The
+auditor checks signals, not beauty: the screenshots and the written score remain mandatory and
+are what the handoff is judged on. A file that passes the auditor with a detached hand has
+simply lied to it.
 
 ## 4. Workflow
 
@@ -140,11 +207,15 @@ saves hours by step six (`references/resilience-and-a11y.md`).
 One pass, in this order: **composition** (one foreground object, one subject, a skyline gap where
 the sun sets) → **key light** (pick the direction, derive ambient, fog and rim from it) →
 **materials** (five channels, wear in primer → oxide order, seams at a plate size) →
-**atmosphere** (height fog, then volumetrics) → **post** (HDR → bloom → ACES → grade → sRGB
-encode, and check the encode before touching exposure).
+**atmosphere** (height fog, **depth-aware volumetric ray march**, then **SSAO from scene
+depth**) → **post** (HDR → bloom → ACES → grade → sRGB encode, and check the encode before
+touching exposure). Both atmosphere passes are §2A hard constraints, not polish: build them
+here, in the pipeline, before any content. A depth texture on the scene target is the first
+thing to wire.
 
 Numbers and the failure each step prevents: `references/cinematic-look.md`,
-`references/material-authoring.md`.
+`references/material-authoring.md`. Wire mouse free-look (`§2A.C`) in Step 3's input layer,
+not as a late fix.
 
 ### Step 5 — Make it feel alive
 
@@ -159,9 +230,15 @@ Progress, best score and settings are separate versioned keys, every storage cal
 (private mode throws), and a corrupt save never blocks boot — see
 `references/state-and-persistence.md`.
 
-### Step 7 — Audit, then hand off
+### Step 7 — Self-review, repair, re-shoot, then audit
 
-Run the gates in §3, walk the release checklist, and report the six-axis score. See §8.
+Content is done, the build is not. Run §2A.A's loop **at least twice**: capture title,
+gameplay, character close-up and hero-effect shots; score all nine axes in writing; repair
+every below-floor item (structural plausibility first — a detached hand outranks a colour
+grade); re-capture the same shots. Only then run the gates in §3
+(`--strict --craft`), walk the release checklist, and report the nine-axis score, the review
+rounds and the fixes with before/after evidence. See §8 and
+`references/visual-self-review.md`.
 
 ## 5. What goes where
 
@@ -191,6 +268,7 @@ before definition. No classes unless state is genuinely per-instance.
 | `references/performance.md` | Frame budget, baking, pooling, instancing, adaptive quality |
 | `references/resilience-and-a11y.md` | Error boundary, degradation ladder, reduced motion, contrast |
 | `references/design-language.md` | Tokens, HUD composition, buttons, type scale |
+| `references/visual-self-review.md` | The mandatory shot → score → repair → re-shoot loop, the limb-connection checklist, defect recipes, report template |
 | `references/release-checklist.md` | The final pass; the ship gate, not a suggestion |
 | `assets/starter-3d.html` | Runnable WebGL2 slice: HDR, shadows, volumetrics, SSAO, bloom, ACES, playable |
 | `assets/starter-2d.html` | Runnable canvas shell, playable, juice included |
@@ -224,9 +302,24 @@ before definition. No classes unless state is genuinely per-instance.
 - **Tuning exposure or bloom to fix a lighting or modelling problem.** If the ground needs
   exposure 2.0, the sun is too low or the albedo is too dark; a bevel does what a bloom pass
   cannot.
+- **Grading a frame that has no SSAO and no volumetrics.** A radial bright-pass streak is a
+  lens effect; it does not put air between the camera and the far plane, and it cannot be
+  occluded by a pillar. This is a §2A failure, not a missing nice-to-have.
+- **Requiring a drag (or a click to capture the pointer) before the camera moves.** The
+  player moves the mouse and nothing happens until they discover an undocumented gesture.
+  Free-look is the default; drag is opt-in.
+- **Writing a self-review score without screenshots, or claiming a fix without a re-shot.**
+  Code is not evidence. The rig that looks connected in the bind pose can throw a hand three
+  metres away on the first attack animation.
+- **Absolute bone positions in a parent-relative hierarchy.** Skeleton nodes store offsets
+  from their parent; authoring them as world coordinates produces a correct-looking bind pose
+  and a disintegrating character as soon as anything animates.
 
 ## 8. Handing off
 
-Report the file path and size, what was verified (audit output **including the `--craft` result**,
-devices and frame budget observed), the **six-axis score with the weakest axis named**, and the
+Report the file path and size, what was verified (audit output **including the `--craft` result
+and the `3D hard constraints: 4/4` line**, devices and frame budget observed), the **six-axis
+score plus the three review axes with the weakest axis named**, the **self-review rounds and
+the before/after fixes** (including the character close-up), confirmation that SSAO and
+depth-aware volumetrics are in the shipped pipeline and that mouse look needs no drag, and the
 one thing to build next. Say explicitly that the player only needs the single file.

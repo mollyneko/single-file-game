@@ -46,27 +46,66 @@ input.move.y = (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) - (keys.has('
 
 `blur` → `keys.clear()` is the single most commonly forgotten line in browser games.
 
-## Pointer and pointer lock (3D look)
+## Pointer: free-look is the default (3D) — MUST
 
-Pointer lock gives infinite mouse travel but needs a gesture and can fail (iframes, some
-browsers). Always implement the drag fallback.
+`SKILL.md` §2A.C. **Moving the mouse turns the camera immediately, with no button held and no
+drag.** The very first mouse movement in the game must move the camera. Drag-to-look is
+**opt-in**: use it only when the user explicitly asks for drag controls, and mark that file with
+`DRAG_LOOK_OPT_IN` so the auditor knows it was requested.
+
+Pointer lock is an *optional enhancement* for infinite travel (FPS-style, cursor hidden). It
+needs a gesture, can fail in iframes, and must never be the only way to look around. Never show
+a "click to capture mouse" gate that blocks play.
 
 ```js
-cv.addEventListener('click', () => {
-  if (cv.requestPointerLock) cv.requestPointerLock().catch(() => {});
-});
+// HARD CONSTRAINT: free-look by default; --craft looks for this marker.
+const FREE_LOOK = true;
+let lastX = 0, lastY = 0;
 
-addEventListener('mousemove', e => {
-  if (document.pointerLockElement === cv) {
-    input.look.dx += e.movementX; input.look.dy += e.movementY;
-  } else if (dragging) {                        // fallback: drag to look
-    input.look.dx += e.movementX; input.look.dy += e.movementY;
+cv.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch') return;        // touch look is handled below
+  const locked = document.pointerLockElement === cv;
+  const dx = locked ? (e.movementX || 0) : (e.clientX - lastX);
+  const dy = locked ? (e.movementY || 0) : (e.clientY - lastY);
+  lastX = e.clientX; lastY = e.clientY;
+  input.look.dx += dx; input.look.dy += dy;      // unconditional — no dragging flag
+});
+cv.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' && e.button === 0) press('attack');   // click is an action,
+  lastX = e.clientX; lastY = e.clientY;                               // never a look gate
+});
+// Optional: a click may capture the pointer. Failure changes nothing about play.
+cv.addEventListener('dblclick', () => {
+  if (cv.requestPointerLock) { try { cv.requestPointerLock(); } catch (er) {} }
+});
+```
+
+Rules:
+
+- No `dragging`, `e.buttons` or `pointerdown` guard around the mouse `look.dx/dy` write.
+  A guarded mouse handler fails `--craft` unless `DRAG_LOOK_OPT_IN` is present.
+- Mouse buttons are gameplay actions (attack / skill / interact), not camera gates.
+- Pointer lock only changes where deltas come from (`movementX/Y` vs `clientX/Y` deltas).
+- On `blur` / `pointerleave`, reset `lastX/lastY` so the first move back does not jump.
+- On touch, dragging the right half of the screen still looks around; that is a different
+  device and does not conflict with this rule. The left half remains the virtual stick.
+- Inverted Y, sensitivity and a "lock pointer" toggle belong in settings.
+
+## Pointer lock fallback (only when the user asked for drag controls)
+
+If — and only if — the brief explicitly asks for drag-to-look, declare
+`const DRAG_LOOK_OPT_IN = true;` and gate the mouse deltas on the active drag:
+
+```js
+const DRAG_LOOK_OPT_IN = true;                 // user explicitly requested drag controls
+cv.addEventListener('pointermove', e => {
+  if (document.pointerLockElement === cv || dragLook.active) {
+    input.look.dx += e.movementX || 0; input.look.dy += e.movementY || 0;
   }
 });
 ```
 
-Show a hint ("click to capture mouse") only when lock is unavailable, and never block play
-waiting for it.
+Even then, keep pointer lock available and never block play waiting for a gesture.
 
 ## Touch
 

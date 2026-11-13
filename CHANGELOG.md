@@ -4,6 +4,47 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] — 2026-11-13
+
+Three constraints that were previously "good practice" are now hard gates. A shipped 3D game
+must prove a **visual self-review with a repair loop**, real **SSAO + depth-aware volumetrics**,
+and **free-look mouse by default**. Triggered by a review of a finished single-file RPG where
+the hands were not attached to the body and the atmosphere passes were screen-space fakes.
+
+### Added
+
+- **`SKILL.md` §2A — Three hard constraints (MUST)**: (A) ≥ 2 rounds of real screenshots,
+  nine-axis written score, repair and re-shot, with structural plausibility (continuous limb
+  chain, animated-frame check) as a hard gate; (B) SSAO rebuilt from scene depth plus
+  shadow-tested depth-aware volumetric ray marching, both present at every quality tier;
+  (C) mouse movement turns the camera with no drag and no click gate, drag only via an explicit
+  `DRAG_LOOK_OPT_IN`.
+- `references/visual-self-review.md` — capture commands, the nine-axis score sheet, the
+  limb-connection checklist, a defect → repair recipe table (including the absolute-vs-relative
+  bone-offset bug), the `SELF-REVIEW` marker format and the handoff report template.
+- A **second** `--craft` gate: `3D hard constraints: n/4` for SSAO, volumetrics, free-look and
+  the self-review record. Both gates must report `4/4`. Signals are checked against the game's
+  own source, with inline minified-engine lines stripped so `DepthTexture`/`shadowMap` inside
+  three.js cannot fake a pass. `hard_hits` / `hard_missing` added to `--json`.
+- Eleven new unit tests (28 total) covering both gates, drag opt-in, marker validation
+  (rounds, close-up, fixes, re-shot) and the inline-engine false-positive case.
+- Release checklist §12 and three new red flags; ten-second test extended to ten questions.
+- Hard-constraint summaries in `README.md` and `README.zh-CN.md`.
+
+### Changed
+
+- `references/cinematic-look.md`: §4 volumetrics and §5 AO are now **MUST**, with a new §5A
+  implementation-contract table (what counts vs. lookalikes), depth-texture wiring, the
+  MSAA/depth-texture incompatibility, view-space reconstruction and the composite order.
+- `references/input-and-mobile.md`: pointer section rewritten as free-look default; the old
+  drag-to-look code is now an explicitly opt-in fallback.
+- `references/procedural-3d.md`: render graph and quality tiers now include both atmosphere
+  passes at every tier (`ao` and `volSteps` are never off); camera section states free-look.
+- `assets/starter-3d.html`: the 3D starter itself now uses free-look mouse (touch still drags
+  on the right half), so scaffolds inherit the default instead of drag gating.
+- Workflow Step 7 is now "Self-review, repair, re-shoot, then audit"; the handoff reports nine
+  axes, review rounds and both `--craft` results. Four new anti-patterns.
+
 ## [1.3.0] — 2026-11-13
 
 2D is no longer an acceptable default answer to "make me a game", and "looks AAA" is no longer a

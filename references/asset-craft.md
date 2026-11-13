@@ -99,6 +99,13 @@ each a hard failure when missing from a 3D deliverable:
 It also reports the four groups as a `4/4` note so a reviewer can see the craft budget at a
 glance. A file that is not detected as 3D skips the gate.
 
+`--craft` now enforces a **second, separate** set of four hard constraints from `SKILL.md` §2A —
+SSAO, depth-aware volumetrics, free-look mouse, and a `SELF-REVIEW` record — reported as
+`3D hard constraints: 4/4`. Both notes must read `4/4` to ship. This file covers the asset
+layer; see `references/cinematic-look.md` §5A, `references/input-and-mobile.md` and
+`references/visual-self-review.md` for the other four. Passing the auditor still says nothing
+about beauty or about whether a hand is attached: those are judged on screenshots.
+
 ## Priority when catching up
 
 Cheapest first, all of them possible without an engine:

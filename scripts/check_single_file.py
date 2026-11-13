@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Audit a single-file HTML game against the format rules and the 3D asset-craft gate.
+"""Audit a single-file HTML game against the format rules and the 3D ship gates.
 
 Checks the things that actually break this format: remote resources, missing shell parts,
-dangling element IDs and runaway file size. With --craft it also enforces the 3D hard gate
-(bevel/curved geometry, a named material library, generated textures, continuous skinning).
+dangling element IDs and runaway file size. With --craft it enforces both 3D gates: the asset
+layer (bevel/curved geometry, a named material library, generated textures, continuous
+skinning) and SKILL.md section 2A's hard constraints (depth-based SSAO, depth-aware
+volumetrics, free-look mouse, a recorded visual self-review).
 
     python check_single_file.py game.html
     python check_single_file.py game.html --strict
-    python check_single_file.py game3d.html --strict --craft   # 3D ship gate
+    python check_single_file.py game3d.html --strict --craft   # 3D ship gates
     python check_single_file.py assets/*.html --json
 
 Exit codes: 0 = pass, 1 = failure (or any warning with --strict).
@@ -95,6 +97,99 @@ SKINNING_SIGNALS = [
     re.compile(r"skinning_vertex|skinnormal_vertex|boneWeights|bindMatrix", re.IGNORECASE),
 ]
 
+# --- 3D hard constraints (SKILL.md section 2A) --------------------------
+# Signals, not beauty. A shipped 3D game must prove that depth-based SSAO,
+# depth-aware volumetrics, free-look mouse and a visual self-review exist.
+# The screenshots and written scores remain mandatory and are judged by a human.
+SSAO_SIGNAL = re.compile(
+    r"\bSSAO\b|ambientOcclusion|aoSamples|uAORadius|hemisphere[A-Za-z]*[Oo]ccl", re.IGNORECASE
+)
+DEPTH_SAMPLE_SIGNAL = re.compile(
+    r"DepthTexture|depthTexture|\buDepth\b|\btDepth\b|depthMap|gl_FragDepth|DEPTH_ATTACHMENT",
+    re.IGNORECASE,
+)
+VOL_SIGNAL = re.compile(
+    r"volumetric|raymarch|rayMarch|lightShaft|uSigma|transmittance", re.IGNORECASE
+)
+VOL_DEPTH_SIGNAL = re.compile(
+    r"uShadow|shadowMap|sceneDepth|uDepth|tDepth|depthTexture|DepthTexture|shadowTest|uLightVP",
+    re.IGNORECASE,
+)
+FREE_LOOK_SIGNAL = re.compile(r"\bFREE_LOOK\b|freeLook|free-look", re.IGNORECASE)
+DRAG_OPT_IN_SIGNAL = re.compile(r"\bDRAG_LOOK_OPT_IN\b", re.IGNORECASE)
+LOOK_HANDLER_SIGNAL = re.compile(
+    r"addEventListener\(\s*['\"](?:pointermove|mousemove)['\"]", re.IGNORECASE
+)
+SELF_REVIEW_RE = re.compile(r"<!--\s*SELF-REVIEW\s*(\{[\s\S]*?\})\s*-->", re.IGNORECASE)
+# An inline minified engine is one 600 KB line that already contains "DepthTexture",
+# "shadowMap" and "transmittance". Counting those words as game work would make the
+# gate pass a file with no SSAO and no volumetrics at all. Signals are judged on the
+# game's own source only.
+MINIFIED_LINE_LIMIT = 4000
+
+
+def game_source(text: str) -> str:
+    """Strip inline minified-engine lines before checking section 2A signals."""
+    return "\n".join(line for line in text.splitlines() if len(line) <= MINIFIED_LINE_LIMIT)
+
+
+def self_review_status(text: str) -> tuple[bool, str]:
+    """Validate the SELF-REVIEW marker: rounds, close-up shot, fixes and re-shot."""
+    m = SELF_REVIEW_RE.search(text)
+    if not m:
+        return False, "no SELF-REVIEW marker"
+    try:
+        data = json.loads(m.group(1))
+    except (ValueError, TypeError):
+        return False, "malformed SELF-REVIEW JSON"
+    if not isinstance(data, dict):
+        return False, "SELF-REVIEW is not an object"
+    rounds = data.get("rounds")
+    if not isinstance(rounds, int) or rounds < 2:
+        return False, "rounds < 2"
+    shots = data.get("shots")
+    if not isinstance(shots, list) or not any(
+        "close" in str(s).lower() or "char" in str(s).lower() for s in shots
+    ):
+        return False, "no character close-up shot"
+    fixes = data.get("fixes")
+    if not isinstance(fixes, list) or not fixes:
+        return False, "no recorded fixes"
+    if data.get("reshoot") is not True:
+        return False, "no re-shot evidence"
+    return True, ""
+
+
+def hard_check(text: str) -> tuple[list[str], list[str], list[str]]:
+    """Return (hit groups, missing groups, diagnostic details) for section 2A."""
+    detail: list[str] = []
+    groups: dict[str, bool] = {}
+
+    ssao = SSAO_SIGNAL.search(text) is not None and DEPTH_SAMPLE_SIGNAL.search(text) is not None
+    groups["depth-based SSAO"] = ssao
+    if not ssao:
+        detail.append("SSAO needs both an AO pass and a sampled scene-depth source")
+
+    vol = VOL_SIGNAL.search(text) is not None and VOL_DEPTH_SIGNAL.search(text) is not None
+    groups["depth-aware volumetrics"] = vol
+    if not vol:
+        detail.append("volumetrics needs a ray march plus depth/shadow termination")
+
+    opt_in = DRAG_OPT_IN_SIGNAL.search(text) is not None
+    free = (opt_in or FREE_LOOK_SIGNAL.search(text) is not None) and LOOK_HANDLER_SIGNAL.search(text) is not None
+    groups["free-look mouse"] = free
+    if not free:
+        detail.append("mouse look needs FREE_LOOK (or an explicit DRAG_LOOK_OPT_IN) and a move handler")
+
+    review, why = self_review_status(text)
+    groups["visual self-review"] = review
+    if not review:
+        detail.append(f"self-review: {why}")
+
+    hits = [k for k, v in groups.items() if v]
+    missing = [k for k, v in groups.items() if not v]
+    return hits, missing, detail
+
 
 def craft_check(text: str) -> tuple[list[str], list[str], bool]:
     """Return (hit groups, missing groups, whether skinning was required)."""
@@ -125,6 +220,8 @@ class Report:
     notes: list[str] = field(default_factory=list)
     craft_hits: list[str] = field(default_factory=list)
     craft_missing: list[str] = field(default_factory=list)
+    hard_hits: list[str] = field(default_factory=list)
+    hard_missing: list[str] = field(default_factory=list)
 
     def fail(self, msg: str) -> None:
         self.failures.append(msg)
@@ -149,6 +246,8 @@ class Report:
             "notes": self.notes,
             "craft_hits": self.craft_hits,
             "craft_missing": self.craft_missing,
+            "hard_hits": self.hard_hits,
+            "hard_missing": self.hard_missing,
         }
 
 
@@ -157,6 +256,7 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
     raw = path.read_bytes()
     r.size_kb = len(raw) / 1024
     text = raw.decode("utf-8", errors="replace")
+    game_src = game_source(text)
     head = text[: text.lower().find("</head>") + 7] if "</head>" in text.lower() else text
 
     # --- format: no remote anything -------------------------------------
@@ -235,7 +335,7 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
     else:
         r.note(f"file is {r.size_kb:.0f} KB")
 
-    # --- 3D asset craft ---------------------------------------------------
+    # --- 3D gates: asset craft, then section 2A hard constraints ----------
     if IS_3D.search(text):
         hits, missing, needs_skin = craft_check(text)
         r.craft_hits, r.craft_missing = hits, missing
@@ -245,6 +345,17 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
                 r.fail(f"3D craft gate: {group} missing — see references/asset-craft.md")
         elif missing:
             r.note("3D craft gate not enforced; ship with --strict --craft")
+
+        h_hits, h_missing, h_detail = hard_check(game_src)
+        r.hard_hits, r.hard_missing = h_hits, h_missing
+        r.note(f"3D hard constraints: {len(h_hits)}/4")
+        for line in h_detail:
+            r.note(f"  {line}")
+        if craft:
+            for group in h_missing:
+                r.fail(f"3D hard constraint: {group} missing — see SKILL.md section 2A")
+        elif h_missing:
+            r.note("3D hard constraints not enforced; ship with --strict --craft")
     elif craft:
         r.note(
             "not a 3D build: craft gate skipped. 3D is the default target (SKILL.md section 0); "
@@ -277,7 +388,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
     ap.add_argument(
         "--craft", action="store_true",
-        help="enforce the 3D asset-craft hard gate (mandatory for a shipped 3D game)",
+        help="enforce both 3D ship gates: asset craft and section 2A hard constraints",
     )
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     # A minified inline 3D engine (~800 KB) plus a generated asset layer is
