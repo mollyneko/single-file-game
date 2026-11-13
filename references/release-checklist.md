@@ -136,6 +136,10 @@ not just in code:
       renderer.
 - [ ] Models were produced by the img2threejs pipeline: a sculpt spec plus a
       `createObjectModel` factory, with the spec seed recorded beside the world seed.
+- [ ] If the reference images were generated, each is a transparent PNG (no baked backdrop,
+      floor or drop shadow) and the whole set shares one style — palette, lighting direction
+      and rendering treatment. The transparency and palette halves were checked at intake
+      (`check_reference_admission.py --generated`, `check_style_coherence.py`).
 - [ ] No box, sphere or capsule is used directly as a finished asset.
 - [ ] Hard surfaces are beveled; generated geometry recomputes normals; lathe seams are welded.
 - [ ] ≥ 12 named materials with albedo + roughness + metalness, looked up by name.

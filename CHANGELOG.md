@@ -4,6 +4,36 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] — 2026-11-14
+
+Generated reference images now face the same machine gate as everything else in the
+pipeline. When models are produced from generated art, the intake stage refuses images
+with a baked backdrop and rejects a set whose members drift apart in style.
+
+### Added
+
+- `check_reference_admission.py` gains a `--generated` flag: images produced by image
+  generation must be transparent-background PNGs — no baked backdrop, floor, or drop
+  shadow. Enforcement is a per-corner transparency audit (each 32×32 corner patch ≥90%
+  transparent, overall opaque fraction ≤ a 4% floor reserve) with the reason recorded in
+  the provenance JSON. Without the flag, behavior is byte-identical to upstream.
+- `check_style_coherence.py` — a new stage-1 script comparing candidate reference images
+  against an anchor: subject histogram cosine similarity (default ≥0.80) and mean luma
+  delta (default ≤40). It is documented as a deterministic proxy for palette, lighting
+  and rendering drift only; silhouette and material consistency remain human judgment.
+- `SKILL.md` §0: a third hard constraint covering generated reference images (transparent
+  background, no baked scenery or shadow, one coherent style across the set); Step 3 adds
+  the two hard-gate commands with the reasons they exist.
+- Vendored test suite grows 8 → 18: RGBA fixtures, corner-patch transparency cases, and
+  coherence pass/drift scenarios. Repo suite grows 28 → 33 and still passes.
+
+### Changed
+
+- `THIRD_PARTY.md` now documents the three locally modified/added intake files per
+  Apache-2.0 §4(b), with the rationale for each.
+- `references/release-checklist.md` adds the generated-image line: transparent PNG,
+  no baked backdrop, one shared style.
+
 ## [1.5.0] — 2026-11-13
 
 The engine question is settled by mandate, and the modeling question is settled by pipeline.

@@ -33,6 +33,13 @@ with an inline engine is the normal output of this skill, not the ambitious vari
   boxes and capsules into characters, or any ad-hoc primitive stack, is not modeling and fails
   the audit. The pipeline's own gates (strict-quality spec, per-pass review) are this skill's
   geometry and material craft gate.
+- **Generated reference images: transparent background, one style.** When the image fed to
+  img2threejs is generated rather than hand-picked, it MUST be a transparent PNG — no baked
+  backdrop, no floor, no drop shadow — and the whole reference set MUST share one style: same
+  palette, lighting direction and rendering treatment, produced in one session from one style
+  anchor. A baked background corrupts the silhouette trace; a mixed-style set fails review
+  even when each image alone looks fine. Both rules are machine-checked at intake
+  (`check_reference_admission.py --generated`, `check_style_coherence.py`).
 - **2D is opt-in.** Choose it only when the request names it (2D, top-down, pixel, platformer,
   card, board, text, puzzle, "like Vampire Survivors") or when the loop genuinely loses clarity in
   perspective. Then write the reason in one line before the first draw call.
@@ -210,6 +217,28 @@ python img2threejs/forge/stage1_intake/probe_image.py reference.png
 python img2threejs/forge/stage2_spec/validate_sculpt_spec.py spec.json --strict-quality
 python img2threejs/forge/stage3_build/generate_threejs_factory.py spec.json --out model/createObjectModel.ts
 ```
+
+If the reference image is generated instead of hand-picked, two rules are hard gates — and
+the first is machine-enforced at intake, not just prose:
+
+- **Transparent background.** PNG with a real alpha channel; no baked backdrop, no floor, no
+  drop shadow. Stage 1's intake probe traces silhouettes to build the sculpt — a background
+  becomes phantom geometry that every later stage has to fight. Run admission with
+  `--generated`; it rejects an opaque or partially cut-out image with the reason printed:
+
+  ```bash
+  python img2threejs/forge/stage1_intake/check_reference_admission.py reference.png --generated
+  ```
+
+- **One style for the whole set.** Every reference in the game shares the same palette,
+  lighting direction and rendering treatment: generate them in one session from one style
+  anchor (a fixed prompt suffix, a seed family, or an explicit style sheet). The palette and
+  luminance half is machine-checked against the anchor — the first admitted reference — and
+  lighting direction and line treatment stay with the staged visual review:
+
+  ```bash
+  python img2threejs/forge/stage1_intake/check_style_coherence.py anchor.png reference.png
+  ```
 
 The factory arrives as TypeScript with ES imports; adapt it for the single file:
 
