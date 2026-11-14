@@ -41,9 +41,10 @@ with a hand-written post chain.
 **Space, light, material, reflection, world detail, budget.** A perspective camera inside the
 scene, one sun with real shadows, materials with wear and seams, reflections that agree with the
 horizon, surfaces carrying information nobody will read, and bytes spent on assets instead of on
-re-inventing the engine. Miss three of them and the result is a prototype however long the
-feature list is. Floors, numbers and the failure each axis prevents:
-[`SKILL.md`](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes).
+re-inventing the engine. Miss two of them and the result is a prototype however long the feature
+list is. The 1–5 bands and the ship floor live in the
+[scoring rubric](references/scoring-rubric.md);
+[`SKILL.md` §1](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes) is just an index.
 
 ### Three hard constraints (MUST)
 
@@ -51,8 +52,8 @@ Enforced by `--strict --craft` and on screen — see
 [`SKILL.md` §2A](SKILL.md#2a-three-hard-constraints-must):
 
 1. **Visual self-review with a repair loop.** ≥ 2 rounds of real headless screenshots (title,
-   gameplay, **upscaled character close-up**, hero effect), a written score on the six axes plus
-   beauty / structural plausibility / UI readability, every below-floor item repaired, and the
+   gameplay, **upscaled character close-up**, hero effect), a written score on all nine axes
+   against the [rubric](references/scoring-rubric.md), every below-floor item repaired, and the
    same shots re-captured. A detached hand is a failed build: the usual cause is absolute bone
    positions in a parent-relative skeleton. [Review guide](references/visual-self-review.md).
 2. **SSAO and depth-aware volumetrics in every 3D scene.** Hemisphere AO rebuilt from the scene
@@ -172,6 +173,7 @@ single-file-game/
 │   ├── performance.md          frame budget, baking, pooling, adaptive quality
 │   ├── resilience-and-a11y.md  error boundary, degradation ladder, reduced motion
 │   ├── design-language.md      tokens, type scale, buttons, HUD composition
+│   ├── scoring-rubric.md       nine axes, 1–5 bands, ship floor (the only score definition)
 │   ├── visual-self-review.md   shot → score → repair → re-shoot loop, rig checklist
 │   └── release-checklist.md    the ship gate
 ├── img2threejs/                vendored modeling pipeline (Apache-2.0): image → rigged
@@ -199,7 +201,8 @@ single-file-game/
 5. **Content as data.** Tables plus a seeded generator, not hand-authored instances.
 6. **Feel on purpose.** Shake, particles, pops, ticks, idle motion — all cheap, all checked.
 7. **Self-review, repair, re-shoot, then audit.** ≥ 2 screenshot rounds with a character
-   close-up, nine axes scored in writing; then `check_single_file.py --strict --craft`
+   close-up, nine axes scored in writing against `references/scoring-rubric.md`; then
+   `check_single_file.py --strict --craft`
    (asset craft **and** the three hard constraints) and the release checklist.
 
 Full reasoning in [`docs/method.md`](docs/method.md); operational detail in

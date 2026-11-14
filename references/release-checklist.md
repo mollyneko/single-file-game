@@ -10,13 +10,15 @@ to happen.
 - [ ] 2D was not chosen because 3D was hard, three.js was not rejected to keep the file small,
       and no model was hand-assembled from primitives instead of using the img2threejs
       pipeline (`SKILL.md` §0).
-- [ ] The six axes in `SKILL.md` §1 were scored explicitly, and at most one is below its floor.
+- [ ] All nine axes (six ship axes + beauty / structural plausibility / UI readability) were
+      scored explicitly against `references/scoring-rubric.md` — the only definition of the
+      1–5 bands and floor 4 — and none is below its floor.
 - [ ] The three hard constraints in `SKILL.md` §2A are declared: SSAO **and** depth-aware
       volumetrics in the shipped pipeline, free-look mouse by default (or
       `DRAG_LOOK_OPT_IN` because the brief asked for drag), and ≥ 2 self-review rounds with
       re-shots.
-- [ ] All **nine** axes (six ship axes + beauty / structural plausibility / UI readability)
-      were scored **on screenshots**, not on code; none is below its floor. See
+- [ ] That score was written **on screenshots**, not on code, with the weakest axis named and
+      every below-floor axis repaired and the same shot re-captured. Loop and evidence:
       `references/visual-self-review.md`.
 
 ## 1. Format audit
@@ -122,7 +124,7 @@ Manual confirmation of what the script cannot see:
 
 - [ ] File name is stable and versioned: `game-name_v1.html`.
 - [ ] Open the file on a second machine, ideally another OS.
-- [ ] Report back: path, size, six-axis score with the weakest axis named, known limits, next
+- [ ] Report back: path, size, nine-axis score with the weakest axis named, known limits, next
       step.
 
 ## 11. Asset craft (3D deliverables only)
@@ -164,8 +166,8 @@ not just in code:
       hand, hips → thigh → knee → shin → foot, head → neck, on **both** sides.
 - [ ] At least one **animated** frame (walk / attack / jump) was inspected at the same zoom;
       no joint separates and no limb rotates around a distant pivot.
-- [ ] Every below-floor axis was repaired and the **same shot re-captured**; the handoff names
-      the fixes with before/after evidence.
+- [ ] Every below-floor axis (per `references/scoring-rubric.md`) was repaired and the
+      **same shot re-captured**; the handoff names the fixes with before/after evidence.
 - [ ] HUD stays legible over the 3D world; no panel overlaps the character.
 
 ## Red flags that mean "not done"

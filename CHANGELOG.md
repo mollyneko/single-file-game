@@ -4,6 +4,37 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] — 2026-11-14
+
+The nine axes had two competing definitions and only two score bands between them. `SKILL.md` §1
+carried a "floor / prototype tell" table while `visual-self-review.md` carried a "5 looks like /
+below floor" table for the same axes — with different wording — and the promised 1–5 scale had
+no description at all for 2 or 3. The standard now has exactly one home.
+
+### Added
+
+- `references/scoring-rubric.md` — the single definition of the nine axes. Each axis gets a
+  1–5 band table with observable, screenshot-level descriptions; band 4 is the ship floor and
+  bands 2 and 3 are written out for the first time. It also owns the scoring rules (fewer than
+  five ship axes at floor = prototype, any axis below 4 is a defect, repair order), the nine
+  `SELF-REVIEW` keys, and one implementation-handbook link per axis. It deliberately does not
+  duplicate implementation detail.
+- All four READMEs list the rubric in their file trees and link their scoring passages to it.
+
+### Changed
+
+- `SKILL.md` §1 is now an index: six ship-axis names, a one-line read and an implementation
+  link, with a pointer to the rubric. The floor/prototype columns and the scoring rule are gone
+  from here; §0, §2A.A, §3's Frame gate, Step 8, §6's index and §8's handoff all point to the
+  rubric instead of restating a threshold.
+- `references/visual-self-review.md` drops its nine-axis score table and keeps the loop, the
+  checklists, the repair recipes and the evidence record. It states the division of labour up
+  front and notes that `--craft` does not verify the numbers in the marker.
+- `references/release-checklist.md` §0, §10 and §12 now reference the rubric; §10 reports a
+  nine-axis score rather than six.
+- README wording fixed in all four languages: the prototype threshold read "miss three of six",
+  but the rule has always been fewer than five of six at floor — i.e. missing two.
+
 ## [1.5.1] — 2026-11-14
 
 Generated reference images now face the same machine gate as everything else in the

@@ -37,9 +37,10 @@
 
 **공간·빛·재질·반사·세계의 디테일·예산.** 카메라는 장면 안에 있고, 태양은 하나이며 그림자는 실제로
 계산되고, 재질에는 마모와 이음매가 있고, 반사는 지평선과 일치하며, 표면에는 아무도 읽지 않을 정보가
-얹혀 있고, 바이트는 엔진 재구현이 아니라 에셋에 쓰입니다. 여섯 중 셋을 놓치면 기능 목록이 아무리
-길어도 그것은 프로토타입입니다. 각 축의 합격선과 수치, 그리고 이 기준이 없을 때 생기는 문제는
-[`SKILL.md`](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes)에 있습니다.
+얹혀 있고, 바이트는 엔진 재구현이 아니라 에셋에 쓰입니다. 여섯 중 둘을 놓치면 기능 목록이 아무리
+길어도 그것은 프로토타입입니다. 아홉 축의 1~5 등급과 합격선은
+[채점 기준](references/scoring-rubric.md)에만 정의되어 있습니다.
+[`SKILL.md` §1](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes)은 색인일 뿐입니다.
 
 ## 단일 파일은 '프로토타입 화질'의 변명이 아니다
 
@@ -148,6 +149,7 @@ single-file-game/
 │   ├── performance.md          프레임 예산, 굽기, 풀링, 적응형 화질
 │   ├── resilience-and-a11y.md  에러 경계, 단계적 축소, 모션 감소
 │   ├── design-language.md      토큰, 타입 스케일, 버튼, HUD 구성
+│   ├── scoring-rubric.md       아홉 축의 1~5 등급과 합격선 (채점 기준의 유일한 정의)
 │   ├── visual-self-review.md   촬영 → 채점 → 수정 → 재촬영 루프, 리그 체크리스트
 │   └── release-checklist.md    출시 전 체크리스트
 ├── img2threejs/                수록한 모델링 파이프라인(Apache-2.0): 참조 이미지 →
@@ -175,7 +177,8 @@ single-file-game/
 5. **콘텐츠는 데이터로.** 손으로 쓴 인스턴스가 아니라 표와 시드 생성기.
 6. **손맛은 의도적으로 설계한다.** 흔들림, 파티클, 팝, 클릭음, 대기 모션 — 모두 저렴하고 모두 점검 항목.
 7. **스스로 보고, 고치고, 다시 찍고, 감사한다.** 캐릭터 확대 컷을 포함해 실제 스크린샷을
-   2라운드 이상 찍고 9개 축을 문서로 채점한다. 그다음 `check_single_file.py --strict --craft`
+   2라운드 이상 찍고 [채점 기준](references/scoring-rubric.md)에 따라 9개 축을 문서로 채점한다.
+   그다음 `check_single_file.py --strict --craft`
    (에셋 크래프트 **와** 세 가지 하드 제약)와 릴리스 체크리스트를 통과시킨다.
 
 근거는 [`docs/method.md`](docs/method.md), 실무 디테일은 [`SKILL.md`](SKILL.md)에 있습니다.

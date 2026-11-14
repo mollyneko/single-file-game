@@ -7,6 +7,10 @@ frame that is technically complete and reads as a grey prototype.
 The auditor checks that work was *attempted*. It cannot tell a good frame from a bad one. This
 document is how the model judges its own output — and proves the judgement with pixels.
 
+**Division of labour:** `references/scoring-rubric.md` defines the nine axes, their 1–5 bands
+and the ship floor. This file owns the *loop* — capture, score, repair, re-shoot, record — plus
+the checklists and repair recipes. Score against the rubric; never restate a band here.
+
 ## Why this file exists
 
 A finished single-file 3D RPG was reviewed from its source and declared good: it had a weighted
@@ -57,20 +61,13 @@ squinting at a 1280 px screenshot.
 
 ### 2. Score in writing
 
-Nine axes, 1–5, **floor 4**. Six are the ship axes from `SKILL.md` §1; three are review axes.
-Any axis below 4 is a defect to repair, not a stylistic difference.
+Score **all nine axes in writing against `references/scoring-rubric.md`** — six ship axes
+(space, light, material, reflection, world detail, budget) plus three review axes (beauty /
+composition, structural plausibility, UI readability). The rubric is the only definition of the
+1–5 bands, the floor and the prototype rule; this file does not restate them.
 
-| Axis | 5 looks like | Below floor looks like |
-| --- | --- | --- |
-| Space | 3 depth layers, parallax, horizon | flat ground filling the frame |
-| Light | one key, soft contact shadows, form in shade | flat ambient, blown sun, black crush |
-| Material | named PBR maps, seams, wear, scale | one RGB per object, plastic |
-| Reflection | water/IBL agrees with the sky | gradient water, white specular blob |
-| World detail | decals, debris, density near play | three blobs per tree, empty ground |
-| Budget | 60 fps median, no per-frame rebuild | stutter, post stack larger than scene |
-| **Beauty / composition** | intentional palette, clear subject, value hierarchy, warm/cool balance, highlights roll off | muddy, overexposed, random saturation, no focal point |
-| **Structural plausibility** | one connected body, believable joints and proportions, nothing floating or intersecting | detached hands, gap at the shoulder, cape through an arm, weapon in mid-air |
-| **UI readability** | legible on the 3D background, no overlap, clear state | thin light text on bright sky, overlapping panels, hidden HUD |
+Write one integer per axis, name the weakest, and rank the defects worst-first. Structural
+plausibility is a hard gate: a detached limb fails the build regardless of the other eight.
 
 Also confirm the three hard constraints from §2A on screen: SSAO contact darkening at
 junctions, shafts that stop at geometry, and a camera that turns when the mouse simply moves.
@@ -125,8 +122,9 @@ shadows land under feet/wheels, and repeated instances share a seeded transform 
 ### 6. Evidence and record
 
 The artifact must carry a machine-readable marker (an HTML comment costs zero bytes at
-runtime). `--craft` parses it and fails if rounds < 2, shots are missing the close-up, fixes are
-empty, or no re-shot is claimed:
+runtime). The nine `axes` keys and their bands are defined in `references/scoring-rubric.md`.
+`--craft` parses the marker and fails if rounds < 2, shots are missing the close-up, fixes are
+empty, or no re-shot is claimed — it does not verify the numbers:
 
 ```html
 <!-- SELF-REVIEW {"rounds":2,

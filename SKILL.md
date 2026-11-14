@@ -48,15 +48,18 @@ with an inline engine is the normal output of this skill, not the ambitious vari
   how this skill gets ignored.
 - **AAA here means a frame that survives inspection plus a loop that closes**, not content
   volume. A 200 KB file can read as AAA; a 3 MB file of half-built features cannot. When time is
-  short, cut breadth — never one of the six axes in §1.
+  short, cut breadth — never one of the six ship axes in §1.
 - Scope still applies. 3D does not mean more mechanics: one loop, one verb, one failure state,
   one restart. Density, not breadth.
 
 ## 1. Why a frame reads as AAA: six axes
 
-A frame is judged in ten seconds, on these six axes — not on feature count. Score the build
-honestly: **fewer than five of six at the floor means it is a prototype, whatever the feature
-list says.** Details and numbers live in the linked reference.
+A frame is judged in ten seconds, on six ship axes — not on feature count.
+
+**This section is an index.** `references/scoring-rubric.md` is the only definition of the nine
+axes, their 1–5 bands, the ship floor and the scoring rules — including the three review axes
+added during self-review. Score against that file; do not invent a second set of thresholds here.
+Implementation detail stays in the references linked below.
 
 The evidence is not taste. A finished single-file 3D game was compared against a 2D canvas game of
 comparable ambition, and the gap was not content volume — it was these axes: a perspective camera
@@ -66,18 +69,21 @@ plates against unlabelled boxes, 1.4 MB of engine and assets against 190 KB of g
 second teardown, this time of two 3D games, put the same gap in the asset layer: both had a
 complete post chain, and only one had geometry, materials and skinning worth grading.
 
-| # | Axis | Floor at ship | Prototype tell | Detail |
-| --- | --- | --- | --- | --- |
-| 1 | **Space** | Perspective camera inside the scene, FOV 60–75, eye height 1.2–2.0 m, horizon in frame, three depth layers (foreground occluder / subject / far plane), parallax under movement | Orthographic or fixed-zoom top-down, 70% of the frame is ground, no occlusion, no parallax | `references/procedural-3d.md` |
-| 2 | **Light** | One directional key at 10–20° elevation, ≥1024² shadow map with PCF, contact AO, height fog; ambient, fog and rim all derived from the same sun vector | Flat ambient plus brightness painted into albedo; object shadows are ellipses drawn under feet | `references/cinematic-look.md` |
-| 3 | **Material** | ≥12 named materials, five channels (albedo, roughness, metal, height, AO), generated wear and seams, triplanar terrain | One RGB triple per object; zero roughness variance, so everything reads as plastic | `references/material-authoring.md` |
-| 4 | **Reflection** | Environment/IBL sampled from `skyColor()`, planar reflection on water and wet ground, Fresnel boost at grazing angles, reflected horizon = seen horizon | No reflection at all; water is a flat gradient; specular is a white blob | `references/cinematic-look.md` |
-| 5 | **World detail** | Surfaces carry information nobody will read: plate numbers, inspection dates, hazard markings, maintenance tags, decals, debris, a clutter density that rises toward the play area | Abstract symbols only — a tree is three colour blobs, a crate is a brown box, no text anywhere | `references/asset-craft.md` |
-| 6 | **Budget** | Bytes go to assets, not to re-inventing the engine; bake once, instance repeats, ≤2 ms post at 1080p, 60 fps on integrated graphics | Per-frame geometry rebuild; post stack larger than the scene; multi-MB file with no stated reason | `references/performance.md` |
+| # | Ship axis | One-line read | Implementation |
+| --- | --- | --- | --- |
+| 1 | **Space** | Perspective camera inside the scene, three depth layers, parallax | `references/procedural-3d.md` |
+| 2 | **Light** | One sun, real shadows, contact AO, height fog | `references/cinematic-look.md` |
+| 3 | **Material** | Named PBR channels, generated wear and seams | `references/material-authoring.md` |
+| 4 | **Reflection** | IBL and planar water agree with the sky | `references/cinematic-look.md` |
+| 5 | **World detail** | Plates, decals, debris, density rising toward play | `references/asset-craft.md` |
+| 6 | **Budget** | Bake once, instance repeats, 60 fps on integrated graphics | `references/performance.md` |
 
 Axis 1 is the one you cannot recover from later: a 2.5D frame with a top-tier material system
 still reads as a map, not a place. Axis 5 is the cheapest and most skipped — it is what makes a
 level feel like a location. Axes 2–4 are what make objects look like matter instead of stickers.
+Three further axes — beauty / composition, structural plausibility, UI readability — are scored
+on screenshots during self-review, not here. All nine, with their 1–5 bands, live in
+`references/scoring-rubric.md`.
 
 ## 2. Format rules
 
@@ -110,9 +116,9 @@ Once the build first renders, run **at least two review rounds**. Each round is:
    a **zoomed crop of the playable character** (full-frame shots hide broken rigs), and the
    most expensive effect in the scene (water / sunset / boss). Never review from source or
    memory.
-2. **Score in writing** the six axes in §1 **plus** the three review axes in
-   `references/visual-self-review.md`: beauty/composition, structural plausibility, UI
-   readability. Below-floor is a defect, not a taste difference.
+2. **Score in writing** all nine axes against `references/scoring-rubric.md` — the six ship
+   axes in §1 plus beauty/composition, structural plausibility and UI readability. That file
+   owns the 1–5 bands and the floor; below-floor is a defect, not a taste difference.
 3. **Repair every defect**, worst first, then **re-capture the same shots** and compare. A fix
    without a re-shot is an unverified claim.
 4. Record rounds, scores, fixes and re-shot evidence in the handoff and in the `SELF-REVIEW`
@@ -166,7 +172,7 @@ Four gates. The last two are the ones people skip, and they are the ones being j
 | **Format** | `python scripts/check_single_file.py game.html --strict` | external references, network calls, missing `id`s, missing `<title>`/viewport, no error boundary |
 | **Craft** (3D) | same command `--strict --craft` | bare primitives as final assets, RGB-only palettes, untextured surfaces, bones without skinning |
 | **Hard constraints** (3D) | same `--strict --craft` run, plus screenshot evidence | missing SSAO, missing depth-aware volumetrics, drag-gated mouse look, no recorded self-review |
-| **Frame** | score §1's six axes **and** §2A's three review axes, then walk `references/release-checklist.md` | a frame that reads as a prototype, a disconnected limb, or a camera that needs a drag |
+| **Frame** | score all nine axes in `references/scoring-rubric.md`, then walk `references/release-checklist.md` | a frame that reads as a prototype, a disconnected limb, or a camera that needs a drag |
 
 The craft gate for a 3D deliverable is two sentences:
 
@@ -292,12 +298,12 @@ Progress, best score and settings are separate versioned keys, every storage cal
 ### Step 8 — Self-review, repair, re-shoot, then audit
 
 Content is done, the build is not. Run §2A.A's loop **at least twice**: capture title,
-gameplay, character close-up and hero-effect shots; score all nine axes in writing; repair
-every below-floor item (structural plausibility first — a detached hand outranks a colour
-grade); re-capture the same shots. Only then run the gates in §3
-(`--strict --craft`), walk the release checklist, and report the nine-axis score, the review
-rounds and the fixes with before/after evidence. See §8 and
-`references/visual-self-review.md`.
+gameplay, character close-up and hero-effect shots; score all nine axes in writing against
+`references/scoring-rubric.md`; repair every below-floor item (structural plausibility first —
+a detached hand outranks a colour grade); re-capture the same shots. Only then run the gates in
+§3 (`--strict --craft`), walk the release checklist, and report the nine-axis score, the review
+rounds and the fixes with before/after evidence. See §8,
+`references/scoring-rubric.md` and `references/visual-self-review.md`.
 
 ## 5. What goes where
 
@@ -314,6 +320,7 @@ before definition. No classes unless state is genuinely per-instance.
 
 | Path | Read it when |
 | --- | --- |
+| `references/scoring-rubric.md` | **The nine axes and their 1–5 bands** — the only definition of the score and the ship floor; read before every self-review |
 | `references/architecture.md` | You need the shell, the scene machine or the loop contract |
 | `references/procedural-3d.md` | Inline three.js integration, camera, generated textures, quality tiers, fallback |
 | `references/cinematic-look.md` | Sun, sky, shadows, volumetrics, AO, bloom, tone map, grade, the ten-second test |
@@ -386,8 +393,8 @@ before definition. No classes unless state is genuinely per-instance.
 Report the file path and size, what was verified (audit output **including the `--craft` result
 and the `3D hard constraints: 4/4` line**, devices and frame budget observed), confirmation that
 three.js is inlined (version noted) and that the models came from the img2threejs pipeline with
-the spec seed recorded, the **six-axis score plus the three review axes with the weakest axis
-named**, the **self-review rounds and the before/after fixes** (including the character
+the spec seed recorded, the **nine-axis score** (`references/scoring-rubric.md`) with the weakest
+axis named, the **self-review rounds and the before/after fixes** (including the character
 close-up), confirmation that SSAO and depth-aware volumetrics are in the shipped pipeline and
 that mouse look needs no drag, and the one thing to build next. Say explicitly that the player
 only needs the single file.
