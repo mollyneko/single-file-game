@@ -1042,7 +1042,7 @@ void main(){
   col = clamp(col, 0.0, 1.0);
 
   // linear -> sRGB transfer. Skipping this is the classic "why is my render black"
-  // of hand-written pipelines: the canvas does not encode for you.
+  // of hand-written post chains: the canvas does not encode for you.
   col = mix(col * 12.92, 1.055 * pow(col, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, col));
 
   // grade: cool shadows, warm highlights, a touch of contrast and saturation
@@ -1805,10 +1805,17 @@ function stats(dt) {
 }
 
 /* ============================== GAME (replace this block) ===========
-   The rules live here. Everything above (pipeline, shading, camera) is the
-   look; everything below (scenes, input, audio) is the shell. Rewrite this
-   block and the game changes without touching the renderer. Nothing here
-   may reach outside the file: no fetch, no assets, no libraries.
+   SHELL ONLY. This file is a raw-WebGL2 post-chain reference slice. It is
+   NOT the renderer for a shipped game, and the rules below are placeholders.
+   Everything above (the POST CHAIN: shading, camera, tone mapping) is the look;
+   everything below (scenes, input, audio) is the shell.
+
+   Before replacing this block in a deliverable (SKILL.md §0 and Step 3):
+     1. Inline a minified three.js build and use its global THREE object.
+     2. Build every model with the vendored img2threejs pipeline, paste each
+        factory in, and add one PIPELINE-RECEIPT marker per model.
+     3. Only then rewrite these rules into the real game loop.
+   Hand-writing geometry here is not modeling and fails --strict --craft.
    =================================================================== */
 let scene = 'boot';
 let state = { cores: 0, t: 120, wins: 0, over: false };

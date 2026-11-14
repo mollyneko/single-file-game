@@ -56,6 +56,24 @@ REVIEW = """<!-- SELF-REVIEW {"rounds":2,
   "fixes":["rig: parent-relative bone offsets","SSAO + volumetric ray march"],
   "reshoot":true} -->"""
 
+# One receipt per model. The auditor checks the declared factory is actually
+# called in the game source and that every staged pass was reviewed "continue".
+PIPELINE_RECEIPT = """<!-- PIPELINE-RECEIPT {"pipeline":"img2threejs",
+  "spec":"models/hero/object-sculpt-spec.json",
+  "state":"models/hero/.img2threejs/state.json",
+  "seed":"hero-7f3a91","factory":"createHeroModel",
+  "passes":[
+    {"id":"blockout","action":"continue","render":"shots/hero/blockout.png"},
+    {"id":"structural-pass","action":"continue","render":"shots/hero/structural.png"},
+    {"id":"form-refinement","action":"continue","render":"shots/hero/form.png"},
+    {"id":"material-pass","action":"continue","render":"shots/hero/material.png"},
+    {"id":"surface-pass","action":"continue","render":"shots/hero/surface.png"},
+    {"id":"lighting-pass","action":"continue","render":"shots/hero/lighting.png"},
+    {"id":"interaction-pass","action":"continue","render":"shots/hero/interaction.png"},
+    {"id":"optimization-pass","action":"continue","render":"shots/hero/optimization.png"}],
+  "references":[{"image":"refs/hero.png","generated":true,"transparent":true,
+                 "styleAnchor":"refs/hero.png"}]} -->"""
+
 # Section 2A hard-constraint signals: depth-based SSAO, depth-aware volumetrics,
 # free-look mouse and the review marker above.
 HARD_SNIPPET = """const FREE_LOOK = true;
@@ -81,8 +99,12 @@ const cvs = document.createElement('canvas');
 const ctx = cvs.getContext('2d');
 const tex = new CanvasTexture(cvs);
 const mesh = new SkinnedMesh(geo, bones);
-mesh.bind(new Skeleton(bones));""",
-).replace("</head>", REVIEW + "\n</head>").replace("<script>", "<script>\n" + HARD_SNIPPET)
+mesh.bind(new Skeleton(bones));
+const SEED = 0x5eed;
+const heroGroup = createHeroModel({ seed: SEED });""",
+).replace("</head>", REVIEW + "\n</head>").replace(
+    "</head>", PIPELINE_RECEIPT + "\n</head>"
+).replace("<script>", "<script>\n" + HARD_SNIPPET)
 
 # Asset craft is complete, but none of the four hard constraints are present.
 CRAFT_ONLY_3D = CRAFT_3D.replace(HARD_SNIPPET, "").replace(REVIEW, "")
@@ -304,6 +326,101 @@ class AuditTests(unittest.TestCase):
         payload = json.loads(result.stdout)[0]
         self.assertEqual(len(payload["hard_hits"]), 4)
         self.assertEqual(payload["hard_missing"], [])
+        self.assertTrue(payload["ok"])
+
+    # --- img2threejs provenance (SKILL.md section 0 / Step 3) ------------
+    def test_3d_deliverable_requires_pipeline_receipt(self):
+        # A fully crafted, fully constrained file still fails if its models
+        # have no pipeline provenance. This is the gap that let hand-built
+        # geometry ship with a passing audit.
+        bad = CRAFT_3D.replace(PIPELINE_RECEIPT, "")
+        result = self.audit(bad, "--strict", "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("no PIPELINE-RECEIPT marker", result.stdout)
+        self.assertIn("SKILL.md Step 3", result.stdout)
+
+    def test_receipt_factory_must_be_called_in_game_source(self):
+        bad = CRAFT_3D.replace("const heroGroup = createHeroModel({ seed: SEED });", "")
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("never called", result.stdout)
+
+    def test_receipt_requires_spec_seed_and_factory_shape(self):
+        bad = (CRAFT_3D.replace('"seed":"hero-7f3a91",', "")
+               .replace('"factory":"createHeroModel"', '"factory":"buildHero"'))
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("spec seed is missing", result.stdout)
+        self.assertIn("factory must be a create...Model name", result.stdout)
+
+    def test_receipt_rejects_malformed_json(self):
+        bad = CRAFT_3D.replace(PIPELINE_RECEIPT, "<!-- PIPELINE-RECEIPT {broken} -->")
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("malformed PIPELINE-RECEIPT JSON", result.stdout)
+
+    def test_receipt_requires_every_pass_reviewed_as_continue(self):
+        bad = CRAFT_3D.replace('"action":"continue"', '"action":"refine-code"', 1)
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("not reviewed as continue", result.stdout)
+
+    def test_receipt_rejects_a_one_pass_stub(self):
+        stub = """<!-- PIPELINE-RECEIPT {"pipeline":"img2threejs",
+          "spec":"models/hero/object-sculpt-spec.json","seed":"s",
+          "factory":"createHeroModel",
+          "passes":[{"id":"blockout","action":"continue","render":"a.png"}]} -->"""
+        bad = CRAFT_3D.replace(PIPELINE_RECEIPT, stub)
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("at least 5 reviewed stages", result.stdout)
+
+    def test_receipt_rejects_opaque_generated_reference(self):
+        bad = CRAFT_3D.replace('"transparent":true', '"transparent":false')
+        result = self.audit(bad, "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("does not declare transparent: true", result.stdout)
+
+    def test_multiple_models_need_one_receipt_each(self):
+        second = (PIPELINE_RECEIPT.replace("createHeroModel", "createPropModel")
+                  .replace("hero/object-sculpt-spec.json", "prop/object-sculpt-spec.json")
+                  .replace("models/hero/.img2threejs/state.json", "models/prop/.img2threejs/state.json")
+                  .replace("hero-7f3a91", "prop-7f3a91"))
+        html = CRAFT_3D.replace(
+            "const heroGroup = createHeroModel({ seed: SEED });",
+            "const heroGroup = createHeroModel({ seed: SEED });\n"
+            "const propGroup = createPropModel({ seed: SEED });",
+        ).replace("</head>", second + "\n</head>")
+        result = self.audit(html, "--strict", "--craft")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("2 model(s) verified", result.stdout)
+
+    def test_receipt_not_enforced_without_craft(self):
+        bad = CRAFT_3D.replace(PIPELINE_RECEIPT, "")
+        result = self.audit(bad, "--strict")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("img2threejs receipt not enforced", result.stdout)
+
+    def test_shell_is_exempt_from_receipt_gate(self):
+        shell = CRAFT_3D.replace(PIPELINE_RECEIPT, "").replace(
+            "<script>",
+            "<script>\n/* ====== GAME (replace this block) ====== */",
+        )
+        result = self.audit(shell, "--strict", "--craft")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("PIPELINE-RECEIPT gate not enforced", result.stdout)
+
+    def test_2d_skips_receipt_gate(self):
+        result = self.audit(GOOD, "--strict", "--craft")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("craft gate skipped", result.stdout)
+        self.assertNotIn("img2threejs receipt", result.stdout)
+
+    def test_json_reports_pipeline_receipt(self):
+        result = self.audit(CRAFT_3D, "--json", "--craft")
+        payload = json.loads(result.stdout)[0]
+        self.assertEqual(payload["pipeline_models"], ["createHeroModel"])
+        self.assertEqual(payload["pipeline_problems"], [])
         self.assertTrue(payload["ok"])
 
 

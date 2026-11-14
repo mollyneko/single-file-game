@@ -78,7 +78,8 @@ shadow map  ->  HDR scene (PBR sky + ground + props)  ->  volumetric sun shafts
 > `2/4` on the craft gate. It is a reference slice, not the modeling path: a shipped 3D game
 > **must inline three.js** and **must build every model with the vendored
 > [img2threejs](https://github.com/img2threejs/img2threejs) pipeline** (`img2threejs/PIPELINE.md`) —
-> reference image in, quality-gated rigged `THREE.Group` factory out. Both rules are audited.
+> reference image in, quality-gated rigged `THREE.Group` factory out. Both rules are audited;
+> the second one by a `PIPELINE-RECEIPT` marker that `--strict --craft` validates.
 
 What that buys, concretely:
 
@@ -195,6 +196,8 @@ single-file-game/
 
 1. **Scope in one sentence.** One loop, one primary verb, one failure state, one restart.
 2. **Build the shell.** Tokens → boot → title → canvas → HUD → screens → error boundary.
+   Then build every model with the vendored img2threejs pipeline and write one
+   `PIPELINE-RECEIPT` per model (`SKILL.md` Step 3) — before touching the `GAME` block.
 3. **Systems in dependency order.** Loop and resize first; input second; gameplay last.
 4. **Light it like a shot.** Composition, one key light, materials with wear, atmosphere,
    then the post chain. Check the sRGB encode before touching exposure.

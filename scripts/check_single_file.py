@@ -3,12 +3,12 @@
 
 Checks the things that actually break this format: remote resources, missing shell parts,
 dangling element IDs and runaway file size. With --craft it enforces the 3D ship gates: an
-inlined three.js build (mandatory, SKILL.md section 0), the asset layer (bevel/curved
-geometry, a named material library, generated textures, continuous skinning) and section 2A's
-hard constraints (depth-based SSAO, depth-aware volumetrics, free-look mouse, a recorded
-visual self-review). A scaffold shell — a file that still carries the
-`GAME (replace this block)` marker — is reported as a shell: the 3D gates describe rather
-than fail until the block is replaced.
+inlined three.js build (mandatory, SKILL.md section 0), a PIPELINE-RECEIPT proving the models
+came out of the vendored img2threejs pipeline, the asset layer (bevel/curved geometry, a named
+material library, generated textures, continuous skinning) and section 2A's hard constraints
+(depth-based SSAO, depth-aware volumetrics, free-look mouse, a recorded visual self-review).
+A scaffold shell — a file that still carries the `GAME (replace this block)` marker — is
+reported as a shell: the 3D gates describe rather than fail until the block is replaced.
 
     python check_single_file.py game.html
     python check_single_file.py game.html --strict
@@ -133,6 +133,20 @@ LOOK_HANDLER_SIGNAL = re.compile(
     r"addEventListener\(\s*['\"](?:pointermove|mousemove)['\"]", re.IGNORECASE
 )
 SELF_REVIEW_RE = re.compile(r"<!--\s*SELF-REVIEW\s*(\{[\s\S]*?\})\s*-->", re.IGNORECASE)
+
+# --- img2threejs provenance (SKILL.md section 0 / Step 3) ---------------
+# A 3D deliverable must prove its models came out of the vendored pipeline.
+# One HTML-comment receipt per model: sculpt spec, spec seed, factory name and
+# the staged pass reviews. The factory also has to be CALLED in the game's own
+# source, so a receipt pasted onto a hand-built file cannot satisfy the gate.
+PIPELINE_RECEIPT_RE = re.compile(
+    r"<!--\s*PIPELINE-RECEIPT\s*(\{[\s\S]*?\})\s*-->", re.IGNORECASE
+)
+FACTORY_NAME_RE = re.compile(r"^create[A-Za-z0-9_]*Model$")
+# The canonical pipeline has eight locked passes (PIPELINE.md); requiring five
+# leaves room for a profile with a shorter pass order without accepting a
+# one-pass stub.
+MIN_REVIEWED_PASSES = 5
 # An inline minified engine is one 600 KB line that already contains "DepthTexture",
 # "shadowMap" and "transmittance". Counting those words as game work would make the
 # gate pass a file with no SSAO and no volumetrics at all. Signals are judged on the
@@ -170,6 +184,102 @@ def self_review_status(text: str) -> tuple[bool, str]:
     if data.get("reshoot") is not True:
         return False, "no re-shot evidence"
     return True, ""
+
+
+def _present(value: object) -> bool:
+    """A declared scalar that is neither empty nor a placeholder boolean."""
+    return isinstance(value, (str, int, float)) and not isinstance(value, bool) and str(value).strip() != ""
+
+
+def pipeline_receipt_status(text: str, source: str) -> tuple[list[str], list[str]]:
+    """Return (verified factory names, problems) for all PIPELINE-RECEIPT markers.
+
+    A receipt is a declaration, so the gate checks the parts a hand-built file
+    cannot honestly fill in: a `create...Model` factory that is actually called
+    in the game source, and every staged pass recorded as reviewed `continue`
+    with a render screenshot. Generated reference images must also declare the
+    transparent-background and style-anchor gates from SKILL.md section 0.
+    """
+    markers = list(PIPELINE_RECEIPT_RE.finditer(text))
+    if not markers:
+        return [], ["no PIPELINE-RECEIPT marker"]
+
+    models: list[str] = []
+    problems: list[str] = []
+    for index, marker in enumerate(markers, 1):
+        tag = f"receipt {index}"
+        try:
+            data = json.loads(marker.group(1))
+        except (ValueError, TypeError):
+            problems.append(f"{tag}: malformed PIPELINE-RECEIPT JSON")
+            continue
+        if not isinstance(data, dict):
+            problems.append(f"{tag}: not a JSON object")
+            continue
+
+        bad: list[str] = []
+        if str(data.get("pipeline", "")).lower() != "img2threejs":
+            bad.append("pipeline is not img2threejs")
+        spec = data.get("spec")
+        if not isinstance(spec, str) or not spec.strip().lower().endswith(".json"):
+            bad.append("spec must be the path to the sculpt spec .json")
+        if not _present(data.get("seed")):
+            bad.append("spec seed is missing")
+
+        factory = data.get("factory")
+        if not isinstance(factory, str) or not FACTORY_NAME_RE.match(factory):
+            bad.append("factory must be a create...Model name")
+        elif not re.search(re.escape(factory) + r"\s*\(", source):
+            bad.append(f"factory {factory} is declared but never called in the game source")
+
+        passes = data.get("passes")
+        if not isinstance(passes, list) or len(passes) < MIN_REVIEWED_PASSES:
+            bad.append(f"passes must list at least {MIN_REVIEWED_PASSES} reviewed stages")
+        else:
+            ids: list[str] = []
+            for entry in passes:
+                if not isinstance(entry, dict):
+                    bad.append("a pass entry is not an object")
+                    break
+                pid = entry.get("id")
+                if not isinstance(pid, str) or not pid.strip():
+                    bad.append("a pass has no id")
+                    break
+                ids.append(pid)
+                if entry.get("action") != "continue":
+                    bad.append(f"pass {pid} is not reviewed as continue")
+                evidence = entry.get("renderScreenshot") or entry.get("render")
+                if not isinstance(evidence, str) or not evidence.strip():
+                    bad.append(f"pass {pid} has no render screenshot evidence")
+            if len(ids) != len(set(ids)):
+                bad.append("pass ids are duplicated")
+            if ids and ids[0] != "blockout":
+                bad.append("the first reviewed pass is not blockout")
+
+        refs = data.get("references")
+        if isinstance(refs, list):
+            for ref in refs:
+                if isinstance(ref, dict) and ref.get("generated") is True:
+                    if ref.get("transparent") is not True:
+                        bad.append("a generated reference does not declare transparent: true")
+                    if not _present(ref.get("styleAnchor")):
+                        bad.append("a generated reference has no style anchor")
+        elif refs is not None:
+            bad.append("references must be an array")
+
+        state_path = data.get("state")
+        if state_path is not None and (
+            not isinstance(state_path, str) or not state_path.endswith("state.json")
+        ):
+            bad.append("state must point at the pipeline state.json")
+
+        if bad:
+            problems.extend(f"{tag}: {msg}" for msg in bad)
+        elif factory in models:
+            problems.append(f"{tag}: duplicate factory {factory}")
+        else:
+            models.append(factory)
+    return models, problems
 
 
 def hard_check(text: str) -> tuple[list[str], list[str], list[str]]:
@@ -235,6 +345,8 @@ class Report:
     craft_missing: list[str] = field(default_factory=list)
     hard_hits: list[str] = field(default_factory=list)
     hard_missing: list[str] = field(default_factory=list)
+    pipeline_models: list[str] = field(default_factory=list)
+    pipeline_problems: list[str] = field(default_factory=list)
 
     def fail(self, msg: str) -> None:
         self.failures.append(msg)
@@ -262,6 +374,8 @@ class Report:
             "craft_missing": self.craft_missing,
             "hard_hits": self.hard_hits,
             "hard_missing": self.hard_missing,
+            "pipeline_models": self.pipeline_models,
+            "pipeline_problems": self.pipeline_problems,
         }
 
 
@@ -364,6 +478,24 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
             else:
                 r.note("no inlined three.js build detected; a 3D deliverable must inline it (SKILL.md section 0)")
 
+        p_models, p_problems = pipeline_receipt_status(text, game_src)
+        r.pipeline_models, r.pipeline_problems = p_models, p_problems
+        if p_problems:
+            r.note(
+                f"img2threejs receipt: {len(p_models)} model(s) verified, "
+                f"{len(p_problems)} problem(s)"
+            )
+        else:
+            r.note(f"img2threejs receipt: {len(p_models)} model(s) verified — {', '.join(p_models)}")
+        if craft:
+            if is_shell:
+                r.note("shell: PIPELINE-RECEIPT gate not enforced until the GAME block is replaced")
+            else:
+                for problem in p_problems:
+                    r.fail(f"img2threejs receipt: {problem} — see SKILL.md Step 3")
+        elif p_problems:
+            r.note("img2threejs receipt not enforced; ship with --strict --craft")
+
         hits, missing, needs_skin = craft_check(text)
         r.craft_hits, r.craft_missing = hits, missing
         r.note(f"3D asset-craft signals: {len(hits)}/4" + (f" (skinning required: {needs_skin})" if needs_skin else ""))
@@ -421,7 +553,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
     ap.add_argument(
         "--craft", action="store_true",
-        help="enforce both 3D ship gates: asset craft and section 2A hard constraints",
+        help="enforce the 3D ship gates: img2threejs receipt, asset craft and section 2A hard constraints",
     )
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     # A minified inline 3D engine (~800 KB) plus a generated asset layer is

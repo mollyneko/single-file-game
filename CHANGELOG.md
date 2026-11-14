@@ -4,6 +4,51 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] — 2026-11-14
+
+A real 3D build made with this skill shipped with eight hand-written source modules and not a
+single img2threejs artifact — yet `--strict --craft` passed (`4/4` asset signals, `4/4` hard
+constraints) and its self-review scored every axis ≥ 4. §0 said "every model comes from the
+pipeline"; the auditor only checked that the file *looked* like carefully hand-crafted 3D, which
+is not the same thing. Step 3 also gave three commands with no way to produce the `spec.json`
+they all consumed, and the scaffold handed the agent a `GAME` block before any factory existed.
+This release closes all of those exits.
+
+### Added
+
+- `PIPELINE-RECEIPT` — one HTML comment per model, carrying the sculpt spec path, state file,
+  spec seed, `create...Model` factory name, every reviewed pass (`action: "continue"` plus a
+  render screenshot) and the generated-reference declarations. `check_single_file.py --craft`
+  now fails a 3D deliverable with no valid receipt, a factory that is never called in the game
+  source, fewer than five distinct reviewed passes, a pass not reviewed `continue`, or a
+  generated reference without `transparent: true` and a style anchor. Scaffold shells and 2D
+  builds remain exempt. The report and `--json` output gain `pipeline_models` /
+  `pipeline_problems`.
+- 12 new repository tests covering every rejection above, multiple receipts, the shell
+  exemption, the 2D skip and JSON output (33 → 45 tests).
+- `SKILL.md` Step 3 now contains the **executable** pipeline spine, verified against the
+  vendored scripts: intake gates → `state.py init` → `next.py` → `probe_image.py` →
+  `new_pre_spec_assessment.py` → `new_sculpt_spec.py` (this is where `spec.json` comes from) →
+  `validate_sculpt_spec.py --strict-quality` → `orchestrate_passes.py status` →
+  `generate_threejs_factory.py` → `make_comparison_sheet.py` / `append_review.py` / `sync` /
+  `next.py` per pass. It also states that a missing reference image is a blocker, not a reason
+  to fall back to primitives.
+
+### Changed
+
+- `SKILL.md` §0, §3 Craft gate, §6 index, §7 anti-patterns and §8 handoff now name the receipt;
+  Step 2 warns that the 3D scaffold is a post-chain reference slice, not a modeling path.
+- `assets/starter-3d.html`'s `GAME` block comment no longer calls the post chain a "pipeline"
+  (which read as "img2threejs already ran") and lists the three steps required before replacing
+  it. `scripts/scaffold.py` prints the 3D sequence instead of "replace everything between the
+  GAME markers".
+- Removed the last "outside the pipeline" backdoor wording from `references/asset-craft.md`
+  (both the header and §1/§5), `references/material-authoring.md` and `SKILL.md` §3; the four
+  `--craft` signal groups are now explicitly necessary but not sufficient.
+- `references/release-checklist.md` §0, §1 and §11 check the receipt; all four READMEs name it.
+- `references/cinematic-look.md` and `assets/starter-3d.html` say "post chain" where "pipeline"
+  could be confused with the modeling pipeline.
+
 ## [1.5.2] — 2026-11-14
 
 The nine axes had two competing definitions and only two score bands between them. `SKILL.md` §1

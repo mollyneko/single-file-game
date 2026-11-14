@@ -16,8 +16,10 @@ curve geometry and instancing as working code. A `<script src>` pointing at a CD
 single-file rule and turns one artifact into two with a third-party uptime dependency.
 
 Models come from the img2threejs pipeline (`img2threejs/PIPELINE.md`): reference image →
-staged, quality-gated sculpt → a `createObjectModel` factory that emits a rigged
-`THREE.Group`. Scene assembly, lighting and post are three.js on top of those models.
+staged, quality-gated sculpt → a `create...Model` factory that emits a rigged
+`THREE.Group`. Each factory leaves a `PIPELINE-RECEIPT` in the HTML — the provenance marker
+`--strict --craft` checks (`SKILL.md` Step 3). Scene assembly, lighting and post are three.js
+on top of those models; writing geometry by hand here is not a modeling path.
 
 ## Boot in the right order
 

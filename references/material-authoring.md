@@ -2,8 +2,8 @@
 
 > **Primary route.** Materials are now authored inside the img2threejs pipeline's material and
 > surface stages (`img2threejs/PIPELINE.md`), which enforce the five-channel model below. Read
-> this file as the theory those stages implement — and as the standard for surfaces built
-> outside the pipeline.
+> this file as the theory those stages implement — the standard a shipped surface is graded
+> against. Surfaces are never authored outside that pipeline (`SKILL.md` §0).
 
 A box with one albedo value reads as a box. A box with a height field, a wear mask, a
 roughness gradient and a seam grid reads as a built object. The gap is not texture memory —

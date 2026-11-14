@@ -9,7 +9,7 @@ to happen.
       written down (a perspective camera would not improve the loop).
 - [ ] 2D was not chosen because 3D was hard, three.js was not rejected to keep the file small,
       and no model was hand-assembled from primitives instead of using the img2threejs
-      pipeline (`SKILL.md` §0).
+      pipeline (`SKILL.md` §0). Every model has a `PIPELINE-RECEIPT` marker in the HTML.
 - [ ] All nine axes (six ship axes + beauty / structural plausibility / UI readability) were
       scored explicitly against `references/scoring-rubric.md` — the only definition of the
       1–5 bands and floor 4 — and none is below its floor.
@@ -28,16 +28,19 @@ python scripts/check_single_file.py path/to/game.html --strict
 python scripts/check_single_file.py path/to/game.html --strict --craft   # 3D deliverable
 ```
 
-`--craft` is **mandatory** for a shipped 3D game: it fails on missing geometry craft, a
-missing named material library, missing generated textures, bones without skinning, **missing
-SSAO, missing depth-aware volumetrics, drag-gated mouse look, or no `SELF-REVIEW` record**.
-The craft groups and the hard constraints are reported separately (`4/4` and `4/4`); a file
-needs both. Starters and in-progress scaffolds are exempt. See `references/asset-craft.md`
-and `references/visual-self-review.md`.
+`--craft` is **mandatory** for a shipped 3D game: it fails on a missing `PIPELINE-RECEIPT`
+(or a receipt with unreviewed passes, an uncalled factory, or an opaque generated reference),
+missing geometry craft, a missing named material library, missing generated textures, bones
+without skinning, **missing SSAO, missing depth-aware volumetrics, drag-gated mouse look, or no
+`SELF-REVIEW` record**. It prints an `img2threejs receipt: N model(s) verified` line, then the
+craft groups and the hard constraints separately (`4/4` and `4/4`); a file needs all three.
+Starters and in-progress scaffolds are exempt. See `references/asset-craft.md`,
+`SKILL.md` Step 3 and `references/visual-self-review.md`.
 
 A 2D deliverable is audited with `--strict` alone; `--craft` on a non-3D file reports that the
-gate was skipped. The bundled `assets/starter-3d.html` reports `2/4`: it is a shell, and building
-its asset layer is the first task, not a verification step.
+gate was skipped. The bundled `assets/starter-3d.html` reports
+`3D asset-craft signals: 2/4` and `3D hard constraints: 3/4`: it is a shell, and building its
+asset layer is the first task, not a verification step.
 
 Manual confirmation of what the script cannot see:
 
@@ -137,7 +140,9 @@ not just in code:
 - [ ] An inline minified **three.js** build is present (`window.THREE`), not a hand-written
       renderer.
 - [ ] Models were produced by the img2threejs pipeline: a sculpt spec plus a
-      `createObjectModel` factory, with the spec seed recorded beside the world seed.
+      `create...Model` factory called from the game source, with the spec seed recorded beside
+      the world seed. One `PIPELINE-RECEIPT` per model is present in the HTML, with all staged
+      passes reviewed `continue` and a render screenshot for each (`SKILL.md` Step 3).
 - [ ] If the reference images were generated, each is a transparent PNG (no baked backdrop,
       floor or drop shadow) and the whole set shares one style — palette, lighting direction
       and rendering treatment. The transparency and palette halves were checked at intake

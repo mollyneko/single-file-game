@@ -32,7 +32,9 @@ with an inline engine is the normal output of this skill, not the ambitious vari
   factory emitting a rigged, animation-ready `THREE.Group` with named materials. Hand-assembling
   boxes and capsules into characters, or any ad-hoc primitive stack, is not modeling and fails
   the audit. The pipeline's own gates (strict-quality spec, per-pass review) are this skill's
-  geometry and material craft gate.
+  geometry and material craft gate. Each model must also leave a `PIPELINE-RECEIPT` marker in
+  the shipped HTML (spec, seed, factory, reviewed passes); `--craft` fails a 3D deliverable
+  without one, and fails a receipt whose factory is never called in the game source.
 - **Generated reference images: transparent background, one style.** When the image fed to
   img2threejs is generated rather than hand-picked, it MUST be a transparent PNG — no baked
   backdrop, no floor, no drop shadow — and the whole reference set MUST share one style: same
@@ -170,21 +172,23 @@ Four gates. The last two are the ones people skip, and they are the ones being j
 | Gate | Act | Fails on |
 | --- | --- | --- |
 | **Format** | `python scripts/check_single_file.py game.html --strict` | external references, network calls, missing `id`s, missing `<title>`/viewport, no error boundary |
-| **Craft** (3D) | same command `--strict --craft` | bare primitives as final assets, RGB-only palettes, untextured surfaces, bones without skinning |
+| **Craft** (3D) | same command `--strict --craft` | no `PIPELINE-RECEIPT` (or a receipt with unreviewed passes / an uncalled factory), bare primitives as final assets, RGB-only palettes, untextured surfaces, bones without skinning |
 | **Hard constraints** (3D) | same `--strict --craft` run, plus screenshot evidence | missing SSAO, missing depth-aware volumetrics, drag-gated mouse look, no recorded self-review |
 | **Frame** | score all nine axes in `references/scoring-rubric.md`, then walk `references/release-checklist.md` | a frame that reads as a prototype, a disconnected limb, or a camera that needs a drag |
 
 The craft gate for a 3D deliverable is two sentences:
 
 1. **three.js is inlined and the models are not hand-made.** A deliverable carries a minified
-   three.js build (`window.THREE`) and its models were produced by the img2threejs pipeline —
-   a sculpt spec plus a `createObjectModel` factory, with the spec seed recorded so the world
-   reproduces. The auditor fails a 3D deliverable with no `THREE` markers; scaffold shells (a
-   kept `GAME (replace this block)` marker) are reported as shells rather than failed.
+   three.js build (`window.THREE`) and one `PIPELINE-RECEIPT` per model: sculpt spec path, spec
+   seed, factory name and the staged pass reviews recorded with `append_review.py` (Step 3).
+   The auditor fails a 3D deliverable with no `THREE` markers or no valid receipt; scaffold
+   shells (a kept `GAME (replace this block)` marker) are reported as shells rather than failed.
 2. **The pipeline's own quality gates were run.** Strict-quality spec validation before any
    code, plus the staged visual review passes, are what "geometry craft" and "material
-   library" mean here. `references/asset-craft.md` keeps the teardown evidence and the
-   auditor's signal groups as a backstop for files built outside the pipeline.
+   library" mean here. `references/asset-craft.md` keeps the teardown evidence behind the
+   auditor's four signal groups; those signals describe the resulting asset layer, they are
+   not an alternative modeling route — a hand-built file can reach `4/4` there and still fail
+   the receipt gate.
 
 The same `--craft` run also enforces §2A. It reports `3D hard constraints: n/4` — SSAO,
 depth-aware volumetrics, free-look mouse, and a `SELF-REVIEW` record with ≥2 rounds. The
@@ -213,51 +217,141 @@ The scaffold already contains the shell (`references/architecture.md`): design t
 screen, title layer, canvas, HUD, pause and game-over cards, input layer, audio bus, save bus,
 error boundary, adaptive quality, and a marked `GAME` block. Keep the shell, replace the rules.
 
+**The 3D scaffold is a shell, not a modeling path.** It ships a raw-WebGL2 post chain for
+reference; it is not the renderer and not where models are written. Do **not** start filling the
+`GAME` block until Step 3 has produced the factories and Step 4 has inlined three.js. Writing
+gameplay into that block first is exactly how a build ends up hand-assembled.
+
 ### Step 3 — Build the models with img2threejs
 
 3D modeling in this skill is the vendored pipeline, never hand-authored geometry
-(`img2threejs/PIPELINE.md`; Apache-2.0, vendored at `img2threejs/`):
+(`img2threejs/PIPELINE.md`; Apache-2.0, vendored at `img2threejs/`). Run the commands from the
+repository root; keep one working directory per model. `PIPELINE.md` is the authority for the
+full gate list — the chain below is its executable spine, verified against the vendored scripts.
 
-```bash
-python img2threejs/forge/stage1_intake/probe_image.py reference.png
-python img2threejs/forge/stage2_spec/validate_sculpt_spec.py spec.json --strict-quality
-python img2threejs/forge/stage3_build/generate_threejs_factory.py spec.json --out model/createObjectModel.ts
-```
-
-If the reference image is generated instead of hand-picked, two rules are hard gates — and
-the first is machine-enforced at intake, not just prose:
+**A reference image is required, one per model.** If the brief supplies none, ask for one or
+generate them before anything else; "no image, so I'll just build primitives" is not a fallback,
+it is a failed run. Generated images are hard-gated at intake:
 
 - **Transparent background.** PNG with a real alpha channel; no baked backdrop, no floor, no
-  drop shadow. Stage 1's intake probe traces silhouettes to build the sculpt — a background
-  becomes phantom geometry that every later stage has to fight. Run admission with
-  `--generated`; it rejects an opaque or partially cut-out image with the reason printed:
+  drop shadow. Stage 1 traces silhouettes to build the sculpt — a background becomes phantom
+  geometry that every later stage has to fight. `check_reference_admission.py --generated`
+  rejects an opaque or partly cut-out image and prints why (α ≥ 4%, each corner ≥ 90% transparent).
+- **One style for the whole set.** Every reference in the game shares one palette, lighting
+  direction and rendering treatment: generate them in one session from one style anchor (a fixed
+  prompt suffix, a seed family, or an explicit style sheet). The palette and luminance half is
+  machine-checked against the anchor — the first admitted reference — by
+  `check_style_coherence.py` (histogram cosine ≥ 0.80, mean luma delta ≤ 40); lighting direction
+  and line treatment stay with the staged visual review.
 
-  ```bash
-  python img2threejs/forge/stage1_intake/check_reference_admission.py reference.png --generated
-  ```
+```bash
+REF=refs/hero.png
+OUT=models/hero
+SPEC="$OUT/object-sculpt-spec.json"
+STATE="$OUT/.img2threejs/state.json"
 
-- **One style for the whole set.** Every reference in the game shares the same palette,
-  lighting direction and rendering treatment: generate them in one session from one style
-  anchor (a fixed prompt suffix, a seed family, or an explicit style sheet). The palette and
-  luminance half is machine-checked against the anchor — the first admitted reference — and
-  lighting direction and line treatment stay with the staged visual review:
+# 0. Intake gates (generated references only). Run once per image; the second
+#    command compares every other reference against the style anchor.
+python img2threejs/forge/stage1_intake/check_reference_admission.py "$REF" --generated
+python img2threejs/forge/stage1_intake/check_style_coherence.py "$REF" refs/prop.png
 
-  ```bash
-  python img2threejs/forge/stage1_intake/check_style_coherence.py anchor.png reference.png
-  ```
+# 1. Local state is the checklist authority. `next.py` prints the current step
+#    and the exact next command at every start, resume and correction iteration.
+python img2threejs/forge/state.py init --state "$STATE" --reference "$REF" \
+  --profile character --spec "$SPEC"          # use generic for props
+python img2threejs/forge/next.py --state "$STATE"
 
-The factory arrives as TypeScript with ES imports; adapt it for the single file:
+# 2. Analyze the image with agent vision first (`PIPELINE.md` step 1), then probe
+#    its technical metadata and author the pre-spec assessment.
+python img2threejs/forge/stage1_intake/probe_image.py "$REF"
+python img2threejs/forge/stage2_spec/new_pre_spec_assessment.py "Hero" \
+  --image "$REF" --complexity complex --out "$OUT/assessment.json"
+
+# 3. THIS is where spec.json comes from. The generator writes the starter spec;
+#    fill in the real component hierarchy, detail inventory, PBR evidence,
+#    lighting entries and identity-defining feature targets before validating.
+python img2threejs/forge/stage2_spec/new_sculpt_spec.py "Hero" --image "$REF" \
+  --assessment "$OUT/assessment.json" --domain character --out "$SPEC"
+python img2threejs/forge/stage2_spec/validate_sculpt_spec.py "$SPEC"
+python img2threejs/forge/stage2_spec/validate_sculpt_spec.py "$SPEC" --strict-quality  # must PASS
+```
+
+`--strict-quality` is the gate that stops a shallow spec. A stub spec fails with a numbered list
+of concrete quality errors; fix those in the spec, do not patch code around them. The factory
+generator is fail-closed — it writes nothing until strict quality passes.
+
+```bash
+# 4. Locked build passes. Generate only the currently unlocked pass; the default
+#    order is blockout → structural-pass → form-refinement → material-pass →
+#    surface-pass → lighting-pass → interaction-pass → optimization-pass.
+python img2threejs/forge/stage3_build/orchestrate_passes.py status "$SPEC"
+python img2threejs/forge/stage3_build/generate_threejs_factory.py "$SPEC" \
+  --out "$OUT/createHeroModel.ts"
+
+# 5. For EACH pass: browser render → deterministic gates (`PIPELINE.md` steps 7–9)
+#    → comparison sheet → agent-vision decision → record the review → sync →
+#    re-check the state machine. Example for the first pass:
+python img2threejs/forge/stage4_review/make_comparison_sheet.py --reference "$REF" \
+  --render shots/hero/blockout.png --out shots/hero/cmp.png --json
+python img2threejs/forge/stage4_review/append_review.py "$SPEC" --pass-id blockout \
+  --fidelity 0.88 --action continue --summary "silhouette matches" \
+  --render-screenshot shots/hero/blockout.png \
+  --map-stripped-render shots/hero/blockout-unlit.png \
+  --comparison-image shots/hero/cmp.png --ai-vision-score 0.88 \
+  --review-viewpoints-json '["thickness-axis","long-axis"]' --in-place
+python img2threejs/forge/stage3_build/orchestrate_passes.py sync "$SPEC" --in-place
+python img2threejs/forge/state.py mark render-capture --state "$STATE" \
+  --evidence shots/hero/blockout.png
+python img2threejs/forge/next.py --state "$STATE" "$SPEC"
+```
+
+`append_review.py` refuses `continue` without the evidence its pass requires (a render
+screenshot, an unlit map-stripped render for blockout, and an AI-vision score at or above the
+threshold). Exit code 3 or `status=stopped` from `next.py` is a hard stop: report the reason and
+request input, never reconstruct progress from chat history.
+
+**Adapt each factory for the single file:**
 
 1. Strip the type annotations — the generated code is structurally plain JS.
 2. Replace `import * as THREE from 'three'` and any `three/examples/jsm/*` imports with the
    inlined global `window.THREE` build; paste in the few jsm helpers the model actually uses.
    OrbitControls is rarely one of them — the game owns its camera.
-3. Paste the factory into the `<script>` IIFE as a `models` module and call it from a spec
+3. Paste the factory into the `<script>` IIFE as a `models` module and **call it** from a spec
    table row. The factory is deterministic: record the spec seed beside the world seed.
 
-Nothing in this step produces an image file. The factory is code, its textures are generated
-inside it, and its output is a rigged `THREE.Group` with named materials and joints the game
-can pose.
+**Write a `PIPELINE-RECEIPT` marker for every model, in the shipped HTML.** This is the audit
+trail for §0's "models come from the pipeline" rule — `--craft` fails a 3D deliverable without
+one. One HTML comment per model, with the sculpt spec path, state file, spec seed, the factory
+name (which must actually be called in the game source), every reviewed pass with its render
+screenshot, and the reference declarations:
+
+```html
+<!-- PIPELINE-RECEIPT {"pipeline":"img2threejs",
+  "spec":"models/hero/object-sculpt-spec.json",
+  "state":"models/hero/.img2threejs/state.json",
+  "seed":"hero-7f3a91","factory":"createHeroModel",
+  "passes":[
+    {"id":"blockout","action":"continue","render":"shots/hero/blockout.png"},
+    {"id":"structural-pass","action":"continue","render":"shots/hero/structural.png"},
+    {"id":"form-refinement","action":"continue","render":"shots/hero/form.png"},
+    {"id":"material-pass","action":"continue","render":"shots/hero/material.png"},
+    {"id":"surface-pass","action":"continue","render":"shots/hero/surface.png"},
+    {"id":"lighting-pass","action":"continue","render":"shots/hero/lighting.png"},
+    {"id":"interaction-pass","action":"continue","render":"shots/hero/interaction.png"},
+    {"id":"optimization-pass","action":"continue","render":"shots/hero/optimization.png"}],
+  "references":[{"image":"refs/hero.png","generated":true,"transparent":true,
+                 "styleAnchor":"refs/hero.png"}]} -->
+```
+
+The auditor requires ≥ 5 distinct passes, all `action: "continue"`, each with render evidence,
+and `blockout` first. It also rejects a declared factory that never appears as a call in the
+game's own source, and a generated reference that does not declare `transparent: true` plus a
+style anchor. A scaffold shell (the `GAME` marker still present) is exempt; a deliverable is not.
+
+The factory is code — its textures are generated inside it and its output is a rigged
+`THREE.Group` with named materials and joints the game can pose. The screenshots, spec and
+state file are **review evidence outside the HTML**, never runtime assets; the shipped file must
+not reference them.
 
 ### Step 4 — Systems before content, in dependency order
 
@@ -325,7 +419,7 @@ before definition. No classes unless state is genuinely per-instance.
 | `references/procedural-3d.md` | Inline three.js integration, camera, generated textures, quality tiers, fallback |
 | `references/cinematic-look.md` | Sun, sky, shadows, volumetrics, AO, bloom, tone map, grade, the ten-second test |
 | `references/material-authoring.md` | PBR channels, height → normal, wear, seams, triplanar, water, baking |
-| `references/asset-craft.md` | Craft-gate rationale: teardown evidence, `--craft` signal groups, backstop for files built outside the pipeline |
+| `references/asset-craft.md` | Craft-gate rationale: teardown evidence behind the four `--craft` signal groups |
 | `img2threejs/PIPELINE.md` | **The modeling pipeline**: stages, quality gates, review contracts, script reference (vendored, Apache-2.0) |
 | `img2threejs/forge/` | The pipeline scripts: intake, spec validation, factory generation, staged review, rig |
 | `THIRD_PARTY.md` | Provenance and license of the vendored img2threejs copy |
@@ -356,7 +450,13 @@ before definition. No classes unless state is genuinely per-instance.
   the audit outright.
 - **Hand-assembling characters from boxes and capsules.** Modeling is the img2threejs pipeline;
   an ad-hoc primitive stack is how rigs detach, materials collapse to RGB triples, and the
-  audit fails.
+  receipt gate fails. `--craft` 4/4 on the four asset signals is not a modelling exemption.
+- **Filling the scaffold's `GAME` block before Step 3 produced the factories.** The shell is
+  raw-WebGL2 post-chain reference code; writing models into it is the shortcut that skips the
+  pipeline entirely.
+- **A reference image being missing, or the first pipeline command failing.** Ask for an image
+  or generate a transparent one; read the error and fix the spec. Neither is a reason to fall
+  back to hand-built geometry.
 - **Untextured boxes under a flat ambient.** The fastest way to look like a placeholder — and
   with `--craft`, a failing audit rather than just a bad eye test.
 - **An RGB triple as a material.** Albedo is one channel; no roughness, wear or seam means no
@@ -392,8 +492,8 @@ before definition. No classes unless state is genuinely per-instance.
 
 Report the file path and size, what was verified (audit output **including the `--craft` result
 and the `3D hard constraints: 4/4` line**, devices and frame budget observed), confirmation that
-three.js is inlined (version noted) and that the models came from the img2threejs pipeline with
-the spec seed recorded, the **nine-axis score** (`references/scoring-rubric.md`) with the weakest
+three.js is inlined (version noted) and that every model carries a `PIPELINE-RECEIPT` from the
+img2threejs pipeline (spec path, seed, factory and reviewed passes), the **nine-axis score** (`references/scoring-rubric.md`) with the weakest
 axis named, the **self-review rounds and the before/after fixes** (including the character
 close-up), confirmation that SSAO and depth-aware volumetrics are in the shipped pipeline and
 that mouse look needs no drag, and the one thing to build next. Say explicitly that the player

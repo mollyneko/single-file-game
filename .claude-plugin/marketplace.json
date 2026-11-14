@@ -10,7 +10,7 @@
     {
       "name": "single-file-game",
       "description": "Single-file, zero-asset browser game development: shell, scene machine, procedural art and audio, input parity, save, performance, release audit.",
-      "version": "1.5.2",
+      "version": "1.5.3",
       "source": "./",
       "category": "development",
       "keywords": ["game", "html", "canvas", "webgl", "procedural", "offline", "single-file"]

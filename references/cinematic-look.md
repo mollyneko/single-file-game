@@ -25,7 +25,7 @@ Every stage assumes the one before it:
 - Linear HDR before everything, or bloom has nothing to bloom and the grade clips.
 - Volumetrics and AO before tone mapping, because they multiply *radiance*, not pixels.
 - **sRGB encode last.** The canvas does not encode for you. This is the single most common
-  reason a hand-written pipeline looks like night. See "The two-stop bug" below.
+  reason a hand-written post chain looks like night. See "The two-stop bug" below.
 
 ## 1. One sun, one direction, one temperature
 
@@ -220,7 +220,7 @@ col = mix(col * 12.92, 1.055 * pow(col, vec3(1.0 / 2.4)) - 0.055, step(0.0031308
 
 Symptom: a scene that looks correct in a debug raw pass, then turns into night after the
 composite; you compensate with exposure 2.0, highlights clip, and the image still feels flat.
-Fix the transfer, then set exposure back to ~0.8–1.0. Every hand-written pipeline hits this
+Fix the transfer, then set exposure back to ~0.8–1.0. Every hand-written post chain hits this
 once. Check it first.
 
 ## Camera

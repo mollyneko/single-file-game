@@ -7,6 +7,9 @@
 The template already contains the shell described in SKILL.md: design tokens, boot screen,
 title layer, canvas, HUD, pause and game-over cards, input, audio bus, save bus, error
 boundary and a marked GAME block. You replace the GAME block; keep the shell.
+For 3D, the template is a raw-WebGL2 post-chain reference slice: build the models with the
+vendored img2threejs pipeline and inline three.js before replacing that block (SKILL.md §0,
+Step 3). Starting from the GAME block is how the pipeline gets skipped.
 """
 
 from __future__ import annotations
@@ -76,8 +79,13 @@ def main(argv: list[str]) -> int:
     print(f"created {out}  ({len(html.encode('utf-8')) / 1024:.0f} KB, {args.mode})")
     print("next:")
     print("  1. open it in a browser — it is playable already")
-    print("  2. replace everything between the GAME markers")
-    print(f"  3. python {Path(__file__).parent.name}/check_single_file.py {out} --strict")
+    if args.mode == "3d":
+        print("  2. build every model with img2threejs (SKILL.md Step 3), then inline three.js")
+        print("  3. add one PIPELINE-RECEIPT marker per model, then replace the GAME block")
+        print(f"  4. python {Path(__file__).parent.name}/check_single_file.py {out} --strict --craft")
+    else:
+        print("  2. replace everything between the GAME markers")
+        print(f"  3. python {Path(__file__).parent.name}/check_single_file.py {out} --strict")
     return 0
 
 

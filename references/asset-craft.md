@@ -3,8 +3,9 @@
 > **Primary route.** Modeling runs through the vendored img2threejs pipeline
 > (`img2threejs/PIPELINE.md`), whose strict-quality spec gate and staged reviews produce the
 > geometry and material craft described here, on an inlined three.js build (`SKILL.md` §0).
-> This file remains as the rationale for the `--craft` signals and as the backstop for files
-> built outside the pipeline.
+> This file is the teardown evidence behind the `--craft` signals. It is **not** an alternative
+> modeling route: there is no such route in this skill, and every shipped model must also carry
+> a `PIPELINE-RECEIPT` (schema in `SKILL.md` Step 3).
 
 A single file is a **format**, not a visual ceiling. Two single-file 3D games were torn apart to
 find out why one reads as a shipped title and the other as a coloured prototype. The answer was
@@ -40,11 +41,12 @@ exempt; a deliverable is not. `check_single_file.py --strict --craft` is the shi
 
 ### 1. Inline the engine; do not spend the budget reimplementing it
 
-"Zero external assets" means zero runtime requests, not zero library code. A 3D build should
-paste a minified engine into the `<script>` block and use its PBR materials, IBL (`PMREM`),
-shadow maps, skinned meshes, lathe/tube/extrude geometry and instancing. Hand-writing a
-renderer is only justified when the asset layer is *already* complete. If the render pipeline
-is larger than the asset layer, the budget is inverted.
+"Zero external assets" means zero runtime requests, not zero library code. Every 3D deliverable
+pastes a minified three.js build into the `<script>` block and uses its PBR materials, IBL
+(`PMREM`), shadow maps, skinned meshes, lathe/tube/extrude geometry and instancing. A
+hand-written WebGL renderer is not permitted in a deliverable (`SKILL.md` §0) — the bundled
+`assets/starter-3d.html` is a post-chain reference slice, not a license to ship one. If the
+render pipeline is larger than the asset layer, the budget is inverted.
 
 > `SKILL.md` §0 makes an inline library the default for 3D and §2 rule 1 permits it. This
 > constraint forbids "dependency purity" as a reason to ship primitive art.
@@ -80,8 +82,9 @@ calibration row (roughness sweep × metalness 0/1) and look at it before tuning 
 
 If it has a skeleton, it is one continuous skinned mesh with bone weights. Attaching one
 primitive per bone leaves visible gaps at every joint; widening the capsules to hide the gaps
-only produces "beads on a string". Use `SkinnedMesh` + `Skeleton` + `bind()`, or an equivalent
-weighted-vertex implementation in a hand-written pipeline.
+only produces "beads on a string". Use `SkinnedMesh` + `Skeleton` + `bind()` on the inlined three.js build. The rig comes from the
+pipeline's rig stage (`img2threejs/forge/stage5_rig/`), not from a separate hand-written
+renderer.
 
 ### 6. Seeded, table-driven asset builders
 
@@ -105,9 +108,20 @@ each a hard failure when missing from a 3D deliverable:
 It also reports the four groups as a `4/4` note so a reviewer can see the craft budget at a
 glance. A file that is not detected as 3D skips the gate.
 
+**These four groups are necessary, not sufficient.** An honestly hand-built file reaches `4/4`
+too — that was the loophole which let a build skip img2threejs entirely. So `--craft` also
+requires, for every 3D deliverable, at least one `PIPELINE-RECEIPT` marker: the sculpt spec
+path, spec seed, a `create...Model` factory that is actually called in the game source, and ≥ 5
+distinct pass reviews recorded as `continue` with render evidence, starting at `blockout`.
+Generated references must declare `transparent: true` and a style anchor. The marker is written
+in Step 3 of `SKILL.md`, after the pipeline has run; a scaffold shell is exempt. A receipt whose
+factory never appears as a call, or whose passes are missing, is rejected — the auditor checks
+provenance, not just the look of the asset layer.
+
 `--craft` now enforces a **second, separate** set of four hard constraints from `SKILL.md` §2A —
 SSAO, depth-aware volumetrics, free-look mouse, and a `SELF-REVIEW` record — reported as
-`3D hard constraints: 4/4`. Both notes must read `4/4` to ship. This file covers the asset
+`3D hard constraints: 4/4`. To ship, the receipt line must show at least one verified model
+and both notes must read `4/4`. This file covers the asset
 layer; see `references/cinematic-look.md` §5A, `references/input-and-mobile.md` and
 `references/visual-self-review.md` for the other four. Passing the auditor still says nothing
 about beauty or about whether a hand is attached: those are judged on screenshots.
