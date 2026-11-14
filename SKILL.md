@@ -114,17 +114,26 @@ rest of it is. They are machine-checked where possible (`--craft`) and always ch
 
 Once the build first renders, run **at least two review rounds**. Each round is:
 
-1. **Capture real frames.** Headless-browser screenshots of the title, a gameplay wide shot,
-   a **zoomed crop of the playable character** (full-frame shots hide broken rigs), and the
-   most expensive effect in the scene (water / sunset / boss). Never review from source or
-   memory.
+1. **Capture real frames — through the fixed protocol, not ad hoc.** Four shots (title, gameplay
+   wide, a **zoomed crop of the playable character**, the most expensive effect), fixed viewport,
+   prewarm, quality tier and seed, so two rounds photograph the same frames. The build accepts
+   `?shot=title|play|char-closeup|hero-effect` plus `?prewarm=`, `?q=`, `?seed=`:
+
+   ```bash
+   python scripts/score_frame.py capture game.html --out review/round-1
+   ```
+
+   Never review from source or memory; a capture whose shots all hash to one picture is rejected.
 2. **Score in writing** all nine axes against `references/scoring-rubric.md` — the six ship
    axes in §1 plus beauty/composition, structural plausibility and UI readability. That file
-   owns the 1–5 bands and the floor; below-floor is a defect, not a taste difference.
+   owns the 1–5 bands and the floor; below-floor is a defect, not a taste difference. The same
+   command reports the **caps** the frames set (exposure, contrast, colour): a capped axis tops
+   out at 3, and scoring above it needs a recorded override, not a shrug.
 3. **Repair every defect**, worst first, then **re-capture the same shots** and compare. A fix
    without a re-shot is an unverified claim.
 4. Record rounds, scores, fixes and re-shot evidence in the handoff and in the `SELF-REVIEW`
-   marker the auditor looks for.
+   marker the auditor looks for — including the `metrics` block that ties the score to the
+   frames it came from (`score_frame.py capture … --marker` prints it).
 
 **Structural plausibility is a hard gate.** A humanoid must read as one connected body at rest
 *and through every animation*: shoulders joined to the torso, upper arm → elbow → forearm →
@@ -174,7 +183,7 @@ Four gates. The last two are the ones people skip, and they are the ones being j
 | **Format** | `python scripts/check_single_file.py game.html --strict` | external references, network calls, missing `id`s, missing `<title>`/viewport, no error boundary |
 | **Craft** (3D) | same command `--strict --craft` | no `PIPELINE-RECEIPT` (or a receipt with unreviewed passes / an uncalled factory), bare primitives as final assets, RGB-only palettes, untextured surfaces, bones without skinning |
 | **Hard constraints** (3D) | same `--strict --craft` run, plus screenshot evidence | missing SSAO, missing depth-aware volumetrics, drag-gated mouse look, no recorded self-review |
-| **Frame** | score all nine axes in `references/scoring-rubric.md`, then walk `references/release-checklist.md` | a frame that reads as a prototype, a disconnected limb, or a camera that needs a drag |
+| **Frame** | capture the four shots with `scripts/score_frame.py`, score all nine axes in `references/scoring-rubric.md`, then walk `references/release-checklist.md` | a frame that reads as a prototype, a disconnected limb, a camera that needs a drag, or an axis scored above the cap its own frames set |
 
 The craft gate for a 3D deliverable is two sentences:
 
@@ -191,10 +200,12 @@ The craft gate for a 3D deliverable is two sentences:
    the receipt gate.
 
 The same `--craft` run also enforces §2A. It reports `3D hard constraints: n/4` — SSAO,
-depth-aware volumetrics, free-look mouse, and a `SELF-REVIEW` record with ≥2 rounds. The
-auditor checks signals, not beauty: the screenshots and the written score remain mandatory and
-are what the handoff is judged on. A file that passes the auditor with a detached hand has
-simply lied to it.
+depth-aware volumetrics, free-look mouse, and a `SELF-REVIEW` record with ≥2 rounds. It also
+checks the **frame metrics** behind that record: the manifest must exist, match its hash, have
+been captured from this build, and no axis may be scored above the cap its frames produced
+without a recorded override. The auditor checks signals, not beauty: the screenshots and the
+written score remain mandatory and are what the handoff is judged on. A file that passes the
+auditor with a detached hand has simply lied to it.
 
 ## 4. Workflow
 
@@ -392,12 +403,13 @@ Progress, best score and settings are separate versioned keys, every storage cal
 ### Step 8 — Self-review, repair, re-shoot, then audit
 
 Content is done, the build is not. Run §2A.A's loop **at least twice**: capture title,
-gameplay, character close-up and hero-effect shots; score all nine axes in writing against
-`references/scoring-rubric.md`; repair every below-floor item (structural plausibility first —
-a detached hand outranks a colour grade); re-capture the same shots. Only then run the gates in
-§3 (`--strict --craft`), walk the release checklist, and report the nine-axis score, the review
-rounds and the fixes with before/after evidence. See §8,
-`references/scoring-rubric.md` and `references/visual-self-review.md`.
+gameplay, character close-up and hero-effect shots through the fixed protocol
+(`scripts/score_frame.py capture`), score all nine axes in writing against
+`references/scoring-rubric.md`, repair every below-floor item (structural plausibility first —
+a detached hand outranks a colour grade), re-capture the same shots and compare the metrics. Only
+then run the gates in §3 (`--strict --craft`), walk the release checklist, and report the
+nine-axis score, the review rounds, the fixes with before/after evidence, and any overridden cap
+with its reason. See §8, `references/scoring-rubric.md` and `references/visual-self-review.md`.
 
 ## 5. What goes where
 
@@ -436,6 +448,8 @@ before definition. No classes unless state is genuinely per-instance.
 | `assets/starter-3d.html` | Raw-WebGL2 reference slice for the post chain (HDR, shadows, volumetrics, SSAO, bloom, ACES) — a shell, not the modeling path; 3D deliverables inline three.js and build models with img2threejs |
 | `assets/starter-2d.html` | Runnable canvas shell, playable, juice included |
 | `scripts/scaffold.py` | Generate a named game from either shell |
+| `scripts/score_frame.py` | Capture the four review shots through the fixed protocol and measure them; prints the caps and the `SELF-REVIEW` metrics block |
+| `scripts/check_single_file.py` | The format, craft, hard-constraint and frame-metrics gates |
 | `scripts/check_single_file.py` | Format audit; `--strict` and `--craft` are the gates |
 | `docs/method.md` | Why the constraints exist, and when not to use this method |
 

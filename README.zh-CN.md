@@ -169,7 +169,8 @@ single-file-game/
 │   └── starter-3d.html         原生 WebGL2 后期链参考切片（壳，不是建模路线）
 ├── scripts/
 │   ├── scaffold.py             从模板生成一个具名游戏
-│   └── check_single_file.py    按格式规则审计文件
+│   ├── check_single_file.py    按格式规则审计文件
+│   └── score_frame.py          拍下评分用的四个机位并测量
 ├── docs/
 │   └── method.md               为什么有这些约束，以及什么时候不该用
 ├── THIRD_PARTY.md              内置流水线的出处与许可
@@ -186,8 +187,10 @@ single-file-game/
    编码，再动曝光。
 5. **内容即数据。** 表格加种子生成器，而不是手写一个个实例。
 6. **手感要刻意设计。** 抖动、粒子、弹跳、点击音、待机动画——成本很低，全部列成清单。
-7. **自评、修复、复拍，再审计。** 至少两轮实拍（含角色放大特写）、按[评分量规](references/scoring-rubric.md)
-   给九轴书面打分，然后跑 `check_single_file.py --strict --craft`（资产工艺 + 三条强制约束）与发布检查清单。
+7. **自评、修复、复拍，再审计。** 至少两轮实拍，走固定协议（`score_frame.py capture`：四个指定机位、
+   固定视口、预跑帧与种子），按[评分量规](references/scoring-rubric.md)给九轴书面打分——除非写明理由，
+   分数不得高于该轮画面测出的上限；然后跑 `check_single_file.py --strict --craft`（资产工艺 + 三条强制约束）
+   与发布检查清单。
 
 完整论证见 [`docs/method.md`](docs/method.md)，操作细节见 [`SKILL.md`](SKILL.md)。
 

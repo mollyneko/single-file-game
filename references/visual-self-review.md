@@ -33,31 +33,45 @@ Three lessons, now rules:
 capture → score → repair → re-capture → compare → (repeat) → record
 ```
 
-### 1. Capture
+### 1. Capture — the same four frames every round
 
 Use a headless browser against the `file://` artifact (no server, no network). Four shots
-minimum, from the *same* build:
+minimum, from the *same* build, at the *same* viewport, prewarm and quality tier. Two rounds that
+photograph different frames are not comparable, and the difference ends up in the score.
 
-| Shot | Why |
-| --- | --- |
-| Title | Composition, type over 3D, sky, first impression |
-| Gameplay wide | Space, light, world detail, HUD in context |
-| **Character close-up** | The structural gate. Crop and upscale the character region ~3× |
-| Hero effect | Water / sunset / boss / particles — the most expensive, most likely to be broken |
+| Shot | `?shot=` | Why |
+| --- | --- | --- |
+| Title | `title` | Composition, type over 3D, sky, first impression |
+| Gameplay wide | `play` | Space, light, world detail, HUD in context |
+| **Character close-up** | `char-closeup` | The structural gate. A camera preset in the build, so the crop is identical every round |
+| Hero effect | `hero-effect` | Water / sunset / boss / particles — the most expensive, most likely to be broken |
+
+The build reads these query parameters; `?prewarm=200&q=high&seed=0` is the default protocol:
 
 ```bash
-EDGE="/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-"$EDGE" --headless=new --no-sandbox --disable-dev-shm-usage \
-  --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader \
-  --enable-logging=stderr --v=0 --window-size=1280,800 \
-  --virtual-time-budget=16000 --screenshot="shots/play.png" \
-  --user-data-dir="shots/profile" "file:///path/game.html#play"
+python scripts/score_frame.py capture game.html --out review/round-1
+python scripts/score_frame.py capture game.html --out review/round-2 --marker
 ```
 
-Add a `#play` (or equivalent) entry that skips the title so gameplay is reachable. Capture
-console errors in the same run: an `Uncaught`/`TypeError` is a defect of the highest severity,
-even if the frame looks fine. Crop with Pillow (`Image.crop(...).resize(...)`) — do not "zoom" by
-squinting at a 1280 px screenshot.
+The script writes `manifest.json` — per-frame sha256, the build fingerprint, the metrics and the
+caps — and it **rejects a capture whose shots all come back as one picture**: that means the
+build ignores `?shot=` and the frames were not separate views of it. `--marker` prints the
+`metrics` block for the `SELF-REVIEW` marker.
+
+Fallback, when no headless browser is discovered automatically:
+
+```bash
+chrome --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader \
+  --hide-scrollbars --force-device-scale-factor=1 --window-size=1280,720 \
+  --virtual-time-budget=6000 --screenshot=review/round-1/play.png \
+  "file:///path/game.html?shot=play&prewarm=200&q=high&seed=0"
+```
+
+Frame the close-up **with the camera**, not by cropping a wide shot afterwards: a preset keeps
+the distance, angle and field of view stable, and a stable frame is what makes two scores
+comparable. Capture console errors in the same run — an `Uncaught`/`TypeError` is a defect of the
+highest severity even when the frame looks fine; the capture script does not read the console, so
+do that once by hand.
 
 ### 2. Score in writing
 
@@ -65,6 +79,11 @@ Score **all nine axes in writing against `references/scoring-rubric.md`** — si
 (space, light, material, reflection, world detail, budget) plus three review axes (beauty /
 composition, structural plausibility, UI readability). The rubric is the only definition of the
 1–5 bands, the floor and the prototype rule; this file does not restate them.
+
+Start from the **caps** the capture reported (`score_frame.py … capture` prints them, and they
+are stored in `manifest.json`). A cap is not a score: it says what the frames rule out. An axis
+sitting at a cap of 3 cannot be written up as 4 without an override carrying the axis, the
+measured value and the stylistic reason — repair the frame, or record the argument.
 
 Write one integer per axis, name the weakest, and rank the defects worst-first. Structural
 plausibility is a hard gate: a detached limb fails the build regardless of the other eight.
@@ -124,7 +143,8 @@ shadows land under feet/wheels, and repeated instances share a seeded transform 
 The artifact must carry a machine-readable marker (an HTML comment costs zero bytes at
 runtime). The nine `axes` keys and their bands are defined in `references/scoring-rubric.md`.
 `--craft` parses the marker and fails if rounds < 2, shots are missing the close-up, fixes are
-empty, or no re-shot is claimed — it does not verify the numbers:
+empty, no re-shot is claimed, the `metrics` manifest is missing or does not match its hash, the
+frames came from another build, or an axis is scored above its cap with no recorded override:
 
 ```html
 <!-- SELF-REVIEW {"rounds":2,
@@ -134,11 +154,13 @@ empty, or no re-shot is claimed — it does not verify the numbers:
   "fixes":["rig: parent-relative bone offsets; arms reconnect at shoulder",
            "added depth-texture SSAO and shadow-tested volumetric ray march",
            "mouse look now free-look by default"],
-  "reshoot":true} -->
+  "reshoot":true,
+  "metrics":{"manifest":"review/round-2/manifest.json","sha256":"<printed by --marker>"}} -->
 ```
 
-Keep the actual screenshots beside the build during review; the handoff must state the rounds,
-the weakest axis and the before/after fixes. **The marker is a receipt, not the review.** A file
+Keep `review/round-N/` beside the build: the manifest and the PNGs are the evidence the audit
+cross-checks. The handoff must state the rounds, the weakest axis, the before/after fixes and any
+overridden cap with its reason. **The marker is a receipt, not the review.** A file
 with a perfect marker and a detached hand is a failed review.
 
 ## Red flags

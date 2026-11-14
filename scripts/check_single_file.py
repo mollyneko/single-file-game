@@ -21,6 +21,7 @@ Exit codes: 0 = pass, 1 = failure (or any warning with --strict).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -189,6 +190,107 @@ def self_review_status(text: str) -> tuple[bool, str]:
 def _present(value: object) -> bool:
     """A declared scalar that is neither empty nor a placeholder boolean."""
     return isinstance(value, (str, int, float)) and not isinstance(value, bool) and str(value).strip() != ""
+
+
+SCORE_AXES = ("space", "light", "material", "reflection", "world", "budget",
+              "beauty", "structure", "ui")
+MIN_OVERRIDE_REASON = 20
+HTML_COMMENT = re.compile(r"<!--[\s\S]*?-->")
+
+
+def html_fingerprint(text: str) -> str:
+    """Hash the code, ignoring comments: the marker cannot hash the file that contains it.
+
+    Comments are stripped because writing the marker's own hash into it must not change the
+    fingerprint. Newlines are normalised because the auditor decodes raw bytes while the capture
+    script reads text, and a CRLF checkout must fingerprint the same as an LF one.
+    """
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(HTML_COMMENT.sub("", normalized).encode("utf-8")).hexdigest()
+
+
+def frame_metrics_status(text: str, base_dir: Path | None, fingerprint: str | None) -> tuple[list[str], list[str]]:
+    """Return (notes, problems) for the frame-metrics block inside SELF-REVIEW.
+
+    The block points at a manifest written by `scripts/score_frame.py`. Three things are
+    checked that a hand-written score cannot fake: the manifest is the one that was hashed, the
+    frames were captured from *this* file (not an earlier build), and no axis is scored above
+    the cap its own frames produced -- unless the marker carries an explicit override naming the
+    axis and the stylistic reason. A metric is not a judgement: it can only lower a score.
+    """
+    m = SELF_REVIEW_RE.search(text)
+    if not m:
+        return [], ["no SELF-REVIEW marker, so there is no frame-metrics block"]
+    try:
+        data = json.loads(m.group(1))
+    except (ValueError, TypeError):
+        return [], ["malformed SELF-REVIEW JSON"]
+    if not isinstance(data, dict):
+        return [], ["SELF-REVIEW is not an object"]
+
+    metrics = data.get("metrics")
+    if not isinstance(metrics, dict):
+        return [], ["no metrics block — capture the frames with scripts/score_frame.py"]
+    relative = metrics.get("manifest")
+    if not isinstance(relative, str) or not relative.strip().lower().endswith(".json"):
+        return [], ["metrics.manifest must be the path to a score_frame manifest.json"]
+    digest = metrics.get("sha256")
+    if not isinstance(digest, str) or len(digest) != 64:
+        return [], ["metrics.sha256 is missing or not a sha256"]
+    if base_dir is None:
+        return [], ["cannot resolve metrics.manifest without the HTML's directory"]
+
+    path = (base_dir / relative).resolve()
+    if not path.is_file():
+        return [], [f"metrics manifest not found: {relative}"]
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if actual != digest.lower():
+        return [], ["metrics.sha256 does not match the manifest on disk (it was edited after capture)"]
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return [], [f"metrics manifest is not readable JSON: {relative}"]
+
+    problems: list[str] = []
+    notes: list[str] = []
+    if fingerprint and manifest.get("htmlFingerprint") != fingerprint:
+        problems.append("the frames were captured from a different build (fingerprint mismatch) — re-capture")
+
+    frames = manifest.get("frames")
+    if not isinstance(frames, list) or len(frames) < 3:
+        problems.append("the manifest has fewer than 3 frames; the protocol asks for play, "
+                        "char-closeup and hero-effect")
+    elif manifest.get("protocolOk") is False:
+        problems.append("the shots produced a single view: the build ignores ?shot=, so the "
+                        "frames are not separate views of it")
+    else:
+        notes.append(f"frame metrics: {len(frames)} frames from this build")
+
+    caps = manifest.get("caps") if isinstance(manifest.get("caps"), dict) else {}
+    axes = data.get("axes") if isinstance(data.get("axes"), dict) else {}
+    overrides = data.get("overrides") if isinstance(data.get("overrides"), list) else []
+    waived: dict[str, str] = {}
+    for entry in overrides:
+        if isinstance(entry, dict) and isinstance(entry.get("axis"), str):
+            reason = entry.get("reason")
+            if isinstance(reason, str) and len(reason.strip()) >= MIN_OVERRIDE_REASON:
+                waived[entry["axis"]] = reason.strip()
+
+    for axis in SCORE_AXES:
+        score = axes.get(axis)
+        cap = caps.get(axis)
+        if not isinstance(score, int) or not isinstance(cap, int):
+            continue
+        if score > cap and axis not in waived:
+            problems.append(
+                f"{axis} is scored {score} but its frames cap it at {cap} — repair the frame, or "
+                f"add an override naming the axis and the stylistic reason"
+            )
+        elif score > cap:
+            notes.append(f"{axis} {score} above cap {cap}: overridden ({waived[axis][:60]})")
+    if problems:
+        return notes, problems
+    return notes, []
 
 
 def pipeline_receipt_status(text: str, source: str) -> tuple[list[str], list[str]]:
@@ -495,6 +597,18 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
                     r.fail(f"img2threejs receipt: {problem} — see SKILL.md Step 3")
         elif p_problems:
             r.note("img2threejs receipt not enforced; ship with --strict --craft")
+
+        f_notes, f_problems = frame_metrics_status(text, path.parent, html_fingerprint(text))
+        for note in f_notes:
+            r.note(note)
+        if craft:
+            if is_shell:
+                r.note("shell: frame-metrics gate not enforced until the GAME block is replaced")
+            else:
+                for problem in f_problems:
+                    r.fail(f"frame metrics: {problem} — see references/scoring-rubric.md")
+        elif f_problems:
+            r.note("frame metrics not enforced; ship with --strict --craft")
 
         hits, missing, needs_skin = craft_check(text)
         r.craft_hits, r.craft_missing = hits, missing

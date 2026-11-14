@@ -162,7 +162,8 @@ single-file-game/
 │   └── starter-3d.html         生 WebGL2 ポストチェーン参照スライス（殻であり、道ではない）
 ├── scripts/
 │   ├── scaffold.py             テンプレートから名前付きゲームを生成
-│   └── check_single_file.py    規約に照らしてファイルを監査
+│   ├── check_single_file.py    規約に照らしてファイルを監査
+│   └── score_frame.py          採点用の 4 ショットを撮って計測
 ├── docs/
 │   └── method.md               なぜこの制約なのか、いつ使うべきでないか
 ├── THIRD_PARTY.md              同梱パイプラインの出所とライセンス
@@ -180,9 +181,10 @@ single-file-game/
    露出を触る前に sRGB エンコードを確認する。
 5. **コンテンツはデータとして。** 手書きの実例ではなく、表とシード付き生成器。
 6. **手触りは意図的に設計する。** 揺れ、粒子、ポップ、クリック音、待機モーション——安価で、すべて点検項目。
-7. **自分で見て、直して、撮り直して、監査する。** キャラの拡大アップを含め実スクリーンショットを
-   2 ラウンド以上撮り、[採点基準](references/scoring-rubric.md) に沿って 9 軸を書いて採点。
-   そのうえで `check_single_file.py --strict --craft`
+7. **自分で見て、直して、撮り直して、監査する。** 固定プロトコル（`score_frame.py capture`：4 つの
+   指定ショット、固定ビューポート、事前フレーム、シード）で 2 ラウンド以上撮影し、
+   [採点基準](references/scoring-rubric.md) に沿って 9 軸を書いて採点。理由を記録しない限り、
+   そのフレームが示した上限を超える点は付けられない。そのうえで `check_single_file.py --strict --craft`
    （アセット工芸 **と** 3 つのハード制約）とリリースチェックリストを通す。
 
 論拠は [`docs/method.md`](docs/method.md)、実務的な詳細は [`SKILL.md`](SKILL.md) にあります。

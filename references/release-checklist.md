@@ -159,14 +159,20 @@ not just in code:
 ## 12. Hard constraints and visual self-review (3D deliverables only)
 
 - [ ] `check_single_file.py --strict --craft` reports `3D hard constraints: 4/4`
-      (SSAO, depth-aware volumetrics, free-look, `SELF-REVIEW` record with ≥ 2 rounds).
+      (SSAO, depth-aware volumetrics, free-look, `SELF-REVIEW` record with ≥ 2 rounds) and
+      reports no `frame metrics` failure.
 - [ ] SSAO is rebuilt from a **scene depth texture**, hemisphere-sampled, depth-blurred, and
       applied to ambient radiance only — visible at crevices and contacts on screen.
 - [ ] Volumetrics ray-march to **scene depth**, are shadow-map tested, and shafts are visibly
       blocked by a pillar or tree. A radial bright-pass streak does not pass this box.
 - [ ] Both passes still run (at reduced step/sample count) on the lowest quality tier.
-- [ ] At least **two** review rounds were completed, each with: title, gameplay wide,
-      **upscaled character close-up**, and hero-effect screenshots.
+- [ ] At least **two** review rounds were completed, each captured through the fixed protocol
+      (`scripts/score_frame.py capture`: four named shots, fixed viewport, prewarm, quality and
+      seed) so the two rounds photograph the same frames. A capture whose shots all came back as
+      one picture is rejected — the build ignores `?shot=`.
+- [ ] The `metrics` block in `SELF-REVIEW` points at a manifest whose hash matches, whose
+      `htmlFingerprint` matches this build, and whose caps no axis exceeds — every exception is
+      an `overrides` entry naming the axis, the measured value and the stylistic reason.
 - [ ] The close-up shows a connected body: shoulder → upper arm → elbow → forearm → wrist →
       hand, hips → thigh → knee → shin → foot, head → neck, on **both** sides.
 - [ ] At least one **animated** frame (walk / attack / jump) was inspected at the same zoom;

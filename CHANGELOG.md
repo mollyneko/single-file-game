@@ -4,6 +4,59 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4] — 2026-11-14
+
+The rubric described a nine-axis score that was, in its own words, "an assertion". Nothing
+checked the numbers, and nothing fixed the frames they referred to: a different shot, viewport,
+quality tier or frame count after boot meant two reviews of the same build could differ by a
+point or two. Half of that is taste, which no script should legislate. The other half is
+mechanical, and this release measures it — without letting a script award points.
+
+### Added
+
+- `scripts/score_frame.py`, standard library only. `capture` drives a headless browser through a
+  fixed protocol — four named shots (`title`, `play`, `char-closeup`, `hero-effect`), 1280×720 at
+  device scale 1, 200 prewarm frames, `high` quality, seed 0, all passed to the build as query
+  parameters — and writes `manifest.json` with a sha256 per frame, the build fingerprint, the
+  per-frame metrics and the resulting caps. `score` re-reads a manifest; `image` scores one PNG.
+- Frame metrics: black crush, clipped highlights, dynamic range, luma contrast, mean saturation,
+  effective hue families and edge density, from an 8-bit PNG decoder written in this repo (no
+  dependency, no Pillow).
+- A capture whose shots all cluster into one picture is **rejected**: the build ignored `?shot=`,
+  so the frames were not separate views of it. Clustering is by statistics, not byte hashes —
+  animation makes every screenshot differ by a few bytes while showing the same frame.
+- `SELF-REVIEW` gains `metrics` (manifest path plus sha256, printed by `capture --marker`) and
+  `overrides`. `check_single_file.py --craft` now fails a 3D deliverable whose manifest is
+  missing, edited after capture, captured from a different build, shorter than three frames, or
+  whose axes are scored above the cap the frames produced with no recorded override.
+- `references/scoring-rubric.md` § "Frame metrics — the measurable half": the protocol table, the
+  red lines, the cap rule and what metrics cannot see.
+
+### Changed
+
+- The rubric's "floor 4" is now stated as two halves: a measurable half that can hold an axis
+  down, and a judged half that decides 4 versus 5. `SKILL.md` §2A.A, the Frame gate in §3, Step 8
+  and the index all point at the capture command; `visual-self-review.md` captures through the
+  script (manual browser command kept as a fallback), and `release-checklist.md` §12 checks the
+  manifest binding.
+- The four READMEs describe the fixed protocol in workflow step 7 and list the new script.
+
+### Notes
+
+- **A metric can only lower a score.** Clearing every red line makes an axis eligible for 4, not
+  entitled to it. Anything a script can reward becomes the thing to game, and the first casualty
+  is the part of the frame nobody measures.
+- **Caps can be overridden, in writing.** A night harbour and a cel-shaded game trip exposure and
+  saturation statistics on purpose; an axis above its cap needs an `overrides` entry naming the
+  axis, the measured value and the reason. The argument lands in the handoff instead of being
+  silent. A gate that cannot be argued with is a gate people learn to fake.
+- The `title` shot is measured but exempt from caps (a flat title card would trip every line
+  without describing the game frame), and `edge_density` only warns: fog, night and desert are
+  legitimately low-detail.
+- The `htmlFingerprint` hashes the file with comments stripped and newlines normalised. Both are
+  forced: writing the manifest's hash into the marker must not change the fingerprint, and a CRLF
+  checkout must fingerprint the same as an LF one.
+
 ## [1.5.3] — 2026-11-14
 
 A real 3D build made with this skill shipped with eight hand-written source modules and not a

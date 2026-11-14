@@ -185,7 +185,8 @@ single-file-game/
 │   └── starter-3d.html         raw-WebGL2 post-chain reference slice (a shell, not the path)
 ├── scripts/
 │   ├── scaffold.py             generate a named game from a template
-│   └── check_single_file.py    audit a file against the format rules
+│   ├── check_single_file.py    audit a file against the format rules
+│   └── score_frame.py          capture the review shots and measure them
 ├── docs/
 │   └── method.md               why the constraints exist, and when not to use them
 ├── THIRD_PARTY.md              provenance and license of the vendored pipeline
@@ -203,9 +204,10 @@ single-file-game/
    then the post chain. Check the sRGB encode before touching exposure.
 5. **Content as data.** Tables plus a seeded generator, not hand-authored instances.
 6. **Feel on purpose.** Shake, particles, pops, ticks, idle motion — all cheap, all checked.
-7. **Self-review, repair, re-shoot, then audit.** ≥ 2 screenshot rounds with a character
-   close-up, nine axes scored in writing against `references/scoring-rubric.md`; then
-   `check_single_file.py --strict --craft`
+7. **Self-review, repair, re-shoot, then audit.** ≥ 2 screenshot rounds captured through the
+   fixed protocol (`score_frame.py capture`: four named shots, fixed viewport, prewarm and seed),
+   nine axes scored in writing against `references/scoring-rubric.md` — never above the caps those
+   frames set unless the reason is recorded; then `check_single_file.py --strict --craft`
    (asset craft **and** the three hard constraints) and the release checklist.
 
 Full reasoning in [`docs/method.md`](docs/method.md); operational detail in

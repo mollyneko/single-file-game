@@ -5,7 +5,9 @@ Run: python -m unittest discover -s tests -v
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -54,7 +56,41 @@ REVIEW = """<!-- SELF-REVIEW {"rounds":2,
   "axes":{"space":5,"light":4,"material":5,"reflection":4,"world":4,"budget":4,
           "beauty":4,"structure":5,"ui":5},
   "fixes":["rig: parent-relative bone offsets","SSAO + volumetric ray march"],
-  "reshoot":true} -->"""
+  "reshoot":true,
+  "metrics":{"manifest":"review/round-1/manifest.json","sha256":"__MANIFEST_SHA__"}} -->"""
+
+# A SELF-REVIEW that admits what its own frames measured but scores above the cap anyway.
+REVIEW_OVERRIDE = REVIEW.replace(
+    '"fixes":',
+    '"overrides":[{"axis":"light","value":0.18,'
+    '"reason":"night harbour: 18% deep shadow is the intended look, anchor frame matches"}],\n  "fixes":',
+)
+
+AXES = ("space", "light", "material", "reflection", "world", "budget",
+        "beauty", "structure", "ui")
+
+
+def frame_fingerprint(text: str) -> str:
+    return hashlib.sha256(re.sub(r"<!--[\s\S]*?-->", "", text).encode("utf-8")).hexdigest()
+
+
+def write_frame_manifest(root: Path, html_path: Path, caps: dict | None = None,
+                         protocol_ok: bool = True, frames: int = 3,
+                         fingerprint: str | None = None) -> str:
+    """Write review/round-1/manifest.json beside the fixture and return its sha256."""
+    manifest = {
+        "version": 1,
+        "htmlFingerprint": fingerprint or frame_fingerprint(html_path.read_text(encoding="utf-8")),
+        "protocolOk": protocol_ok,
+        "frames": [{"shot": name, "metrics": {}} for name
+                   in ("play", "char-closeup", "hero-effect")][:frames],
+        "caps": caps or {axis: 5 for axis in AXES},
+        "ok": protocol_ok,
+    }
+    path = root / "review" / "round-1" / "manifest.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 # One receipt per model. The auditor checks the declared factory is actually
 # called in the game source and that every staged pass was reviewed "continue".
@@ -116,11 +152,35 @@ def run(script: Path, *args: str) -> subprocess.CompletedProcess:
     )
 
 
+def audit_after(html: str, mutate=None, *flags: str) -> subprocess.CompletedProcess:
+    """Audit a fixture, running `mutate(root, html_path)` after the manifest is written."""
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        p = root / "game.html"
+        p.write_text(html.replace("__MANIFEST_SHA__", "0" * 64), encoding="utf-8")
+        digest = write_frame_manifest(root, p)
+        p.write_text(html.replace("__MANIFEST_SHA__", digest), encoding="utf-8")
+        if mutate:
+            mutate(root, p)
+        return run(CHECK, str(p), *flags)
+
+
 class AuditTests(unittest.TestCase):
-    def audit(self, html: str, *flags: str) -> subprocess.CompletedProcess:
+    def audit(self, html: str, *flags: str, caps: dict | None = None,
+              protocol_ok: bool = True, frames: int = 3,
+              fingerprint: str | None = None,
+              write_manifest: bool = True) -> subprocess.CompletedProcess:
         with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "game.html"
+            root = Path(d)
+            p = root / "game.html"
             p.write_text(html, encoding="utf-8")
+            if "__MANIFEST_SHA__" in html:
+                if write_manifest:
+                    digest = write_frame_manifest(root, p, caps=caps, protocol_ok=protocol_ok,
+                                                  frames=frames, fingerprint=fingerprint)
+                    p.write_text(html.replace("__MANIFEST_SHA__", digest), encoding="utf-8")
+                else:
+                    p.write_text(html.replace("__MANIFEST_SHA__", "0" * 64), encoding="utf-8")
             return run(CHECK, str(p), *flags)
 
     def test_starters_pass_strict(self):
@@ -422,6 +482,69 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(payload["pipeline_models"], ["createHeroModel"])
         self.assertEqual(payload["pipeline_problems"], [])
         self.assertTrue(payload["ok"])
+
+
+class FrameMetricsTests(unittest.TestCase):
+    """The measurable half of the rubric: a metric may lower a score, never raise one."""
+
+    def test_missing_manifest_fails(self):
+        result = AuditTests.audit(self, CRAFT_3D, "--strict", "--craft", write_manifest=False)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("metrics manifest not found", result.stdout)
+
+    def test_manifest_edited_after_capture_fails(self):
+        def tamper(root: Path, _html: Path) -> None:
+            path = root / "review" / "round-1" / "manifest.json"
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["caps"]["light"] = 3
+            path.write_text(json.dumps(data), encoding="utf-8")
+
+        result = audit_after(CRAFT_3D, tamper, "--strict", "--craft")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("does not match the manifest on disk", result.stdout)
+
+    def test_frames_from_another_build_fail(self):
+        result = AuditTests.audit(self, CRAFT_3D, "--strict", "--craft",
+                                  fingerprint="f" * 64)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("captured from a different build", result.stdout)
+
+    def test_axis_scored_above_its_cap_fails(self):
+        # light is scored 4, the frames cap it at 3, and nothing explains the gap.
+        result = AuditTests.audit(self, CRAFT_3D, "--strict", "--craft",
+                                  caps={"light": 3})
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("light is scored 4 but its frames cap it at 3", result.stdout)
+
+    def test_override_with_a_reason_is_accepted(self):
+        # The escape hatch: a stylistic reason recorded in the handoff, not a silent pass.
+        result = AuditTests.audit(self, CRAFT_3D.replace(REVIEW, REVIEW_OVERRIDE),
+                                  "--strict", "--craft", caps={"light": 3})
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("light 4 above cap 3: overridden", result.stdout)
+
+    def test_override_without_a_real_reason_still_fails(self):
+        short = REVIEW.replace(
+            '"fixes":', '"overrides":[{"axis":"light","reason":"night"}],\n  "fixes":')
+        result = AuditTests.audit(self, CRAFT_3D.replace(REVIEW, short),
+                                  "--strict", "--craft", caps={"light": 3})
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("light is scored 4 but its frames cap it at 3", result.stdout)
+
+    def test_protocol_failure_blocks(self):
+        result = AuditTests.audit(self, CRAFT_3D, "--strict", "--craft", protocol_ok=False)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("single view", result.stdout)
+
+    def test_too_few_frames_fail(self):
+        result = AuditTests.audit(self, CRAFT_3D, "--strict", "--craft", frames=2)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("fewer than 3 frames", result.stdout)
+
+    def test_2d_build_is_not_asked_for_frames(self):
+        result = run(CHECK, str(ROOT / "assets" / "starter-2d.html"), "--strict", "--craft")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("craft gate skipped", result.stdout)
 
 
 class ScaffoldTests(unittest.TestCase):

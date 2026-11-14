@@ -161,7 +161,8 @@ single-file-game/
 │   └── starter-3d.html         순수 WebGL2 포스트체인 참조 슬라이스(껍데기이지 경로가 아님)
 ├── scripts/
 │   ├── scaffold.py             템플릿에서 이름 있는 게임 생성
-│   └── check_single_file.py    규칙에 비추어 파일 감사
+│   ├── check_single_file.py    규칙에 비추어 파일 감사
+│   └── score_frame.py          채점용 네 샷을 찍고 측정
 ├── docs/
 │   └── method.md               왜 이런 제약인지, 언제 쓰지 말아야 하는지
 ├── THIRD_PARTY.md              수록한 파이프라인의 출처와 라이선스
@@ -179,9 +180,10 @@ single-file-game/
    노출을 만지기 전에 sRGB 인코딩을 확인한다.
 5. **콘텐츠는 데이터로.** 손으로 쓴 인스턴스가 아니라 표와 시드 생성기.
 6. **손맛은 의도적으로 설계한다.** 흔들림, 파티클, 팝, 클릭음, 대기 모션 — 모두 저렴하고 모두 점검 항목.
-7. **스스로 보고, 고치고, 다시 찍고, 감사한다.** 캐릭터 확대 컷을 포함해 실제 스크린샷을
-   2라운드 이상 찍고 [채점 기준](references/scoring-rubric.md)에 따라 9개 축을 문서로 채점한다.
-   그다음 `check_single_file.py --strict --craft`
+7. **스스로 보고, 고치고, 다시 찍고, 감사한다.** 고정 프로토콜(`score_frame.py capture`: 네 개의
+   지정 샷, 고정 뷰포트, 프리웜 프레임, 시드)로 2라운드 이상 찍고
+   [채점 기준](references/scoring-rubric.md)에 따라 9개 축을 문서로 채점한다. 이유를 기록하지 않으면
+   그 프레임이 정한 상한을 넘는 점수는 쓸 수 없다. 그다음 `check_single_file.py --strict --craft`
    (에셋 크래프트 **와** 세 가지 하드 제약)와 릴리스 체크리스트를 통과시킨다.
 
 근거는 [`docs/method.md`](docs/method.md), 실무 디테일은 [`SKILL.md`](SKILL.md)에 있습니다.

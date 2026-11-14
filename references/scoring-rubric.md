@@ -15,6 +15,10 @@ at least one animated frame (the Capture step in `references/visual-self-review.
 - **1–5 per axis, floor 4.** Band 4 *is* the ship floor — it is the definition of "good enough to
   ship". Band 5 exceeds it. Bands 2 and 3 are real, describable states, not a shrug between
   "fine" and "broken".
+- **Floor 4 has two halves.** One half is measurable and the other is judged. `score_frame.py`
+  measures exposure, contrast, colour and detail from the frames themselves; those numbers can
+  hold an axis down, never lift it up. Score the rest by eye, but not above a cap your own frames
+  set unless the marker records why — an unexplained 4 on a capped axis fails the audit.
 - **Six ship axes** (1–6) decide whether the frame reads as AAA. **Fewer than five of the six at
   or above floor means it is a prototype**, whatever the feature list says.
 - **Three review axes** (7–9) decide whether the frame is watchable. Structural plausibility is
@@ -25,6 +29,65 @@ at least one animated frame (the Capture step in `references/visual-self-review.
   beauty / UI → budget. A detached hand outranks a colour grade.
 - Score what the pixels show. A `SELF-REVIEW` marker full of 5s next to a blown-out sky is a
   failed review, not a high score.
+
+## Frame metrics — the measurable half
+
+A score that cannot be reproduced is not a measurement. Half of that drift is taste, which no
+script should try to legislate. The other half is mechanical: if the two reviews did not shoot the
+same frames, they were not scoring the same build. Fix the capture first, then measure.
+
+```bash
+python scripts/score_frame.py capture game.html --out review/round-1
+python scripts/score_frame.py score review/round-1/manifest.json
+python scripts/score_frame.py capture game.html --out review/round-1 --marker   # SELF-REVIEW block
+```
+
+The capture protocol is fixed, and the build has to honour it — `?shot=`, `?prewarm=`, `?q=`,
+`?seed=` on the query string. It needs a headless Chrome, Edge or `chrome-headless-shell`; the
+script finds one on its own or takes `--chrome PATH` / `CHROME_PATH`. No browser means no
+capture, which is not a new dependency: §2A.A has always required screenshots as evidence.
+
+| | Value | Why |
+| --- | --- | --- |
+| Shots | `title`, `play`, `char-closeup`, `hero-effect` | The four kinds of evidence §2A asks for |
+| Viewport | 1280×720, device scale 1 | A frame scored at another size is another frame |
+| Prewarm | 200 frames | Boot, first-frame shader compiles and LOD settling are not the game |
+| Quality | `high` | Score the tier you would show someone |
+| Seed | 0 | Same world, both rounds; a new seed is a new build |
+
+If every shot comes back as the same picture, the build ignores `?shot=` and the capture is
+rejected — the frames were not separate views of anything.
+
+**Caps.** These are computed per frame and the worst frame wins; a clean wide shot does not
+cancel a blown close-up. The `title` card is exempt, because a flat title screen would trip every
+line without saying anything about the game frame.
+
+| Metric | Red line | Caps |
+| --- | --- | --- |
+| `black_crush` (pixels below luma 8) | > 15% | light |
+| `overexposed` (pixels above luma 250) | > 8% | light |
+| `dynamic_range` (p99 − p01) | < 90/255 | light |
+| `contrast` (luma sigma) | < 22 | light, beauty |
+| `saturation_mean` | < 0.06 or > 0.95 | beauty |
+| `hue_families` (effective hue count) | < 1.8 | beauty |
+
+A capped axis tops out at **3**. Reporting 4 or 5 for it fails `--craft` unless the marker
+carries an override naming the axis, the measured value and the stylistic reason:
+
+```json
+"overrides":[{"axis":"light","value":0.18,
+  "reason":"night harbour: 18% deep shadow is the intended look, anchor frame matches"}]
+```
+
+The hatch exists because a night scene and a cel-shaded game trip these statistics on purpose,
+and a gate that cannot be argued with is a gate people learn to fake. Overriding is recorded in
+the handoff, so the argument is visible instead of silent.
+
+**What metrics cannot do.** They never raise a score: a frame that clears every line is *eligible*
+for 4, not entitled to it. They do not see composition, the three depth layers, whether a
+reflection agrees with the sky, or whether world detail means anything. Beauty at 5, the
+plausibility of a silhouette, and the feel of a shot stay with the eye. `edge_density` is
+reported and warned about, never capped — fog, night and desert are legitimately low-detail.
 
 ## The nine axes
 
@@ -156,11 +219,24 @@ they are the `axes` names above, not free text:
           "beauty":4,"structure":5,"ui":5},
   "fixes":["rig: parent-relative bone offsets; arms reconnect at shoulder",
            "added depth-texture SSAO and shadow-tested volumetric ray march"],
-  "reshoot":true} -->
+  "reshoot":true,
+  "metrics":{"manifest":"review/round-2/manifest.json","sha256":"<manifest sha256>"},
+  "overrides":[{"axis":"light","value":0.18,"reason":"night harbour: intended shadow depth"}]} -->
 ```
 
-`scripts/check_single_file.py --craft` checks `rounds ≥ 2`, a close-up shot, non-empty `fixes`
-and `reshoot: true`. **It does not verify the numbers.** The score is an assertion, the
-screenshots are the evidence, and the marker is a receipt — never the review itself. See
-`references/visual-self-review.md` for the loop that produces it (its Evidence and record
-section).
+`metrics` is the block `score_frame.py --marker` prints; `overrides` is only present when a cap
+was overridden on purpose.
+
+`scripts/check_single_file.py --craft` checks `rounds ≥ 2`, a close-up shot, non-empty `fixes`,
+`reshoot: true`, and then the measurable half:
+
+- the manifest exists, its `sha256` matches the file, and it is not a single view pretending to
+  be four;
+- the manifest's `htmlFingerprint` matches **this** build, so frames captured before the last fix
+  cannot be used as evidence for it;
+- no axis is scored above the cap its own frames produced, unless an override names it.
+
+It still does not judge the numbers themselves. A frame can clear every red line and still be
+ugly, and a screenshot of a detached hand passes every statistic. The score is an assertion, the
+frames and their metrics are the evidence, and the marker is a receipt — never the review itself.
+See `references/visual-self-review.md` for the loop that produces it.
