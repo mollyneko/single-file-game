@@ -9,14 +9,16 @@ to happen.
       written down (a perspective camera would not improve the loop).
 - [ ] 2D was not chosen because 3D was hard, three.js was not rejected to keep the file small,
       and no model was hand-assembled from primitives instead of using the img2threejs
-      pipeline (`SKILL.md` §0). Every model has a `PIPELINE-RECEIPT` marker in the HTML.
+      pipeline (`SKILL.md` §0). Every model has a `PIPELINE-RECEIPT` marker in the HTML
+      (**3D only**).
 - [ ] All nine axes (six ship axes + beauty / structural plausibility / UI readability) were
       scored explicitly against `references/scoring-rubric.md` — the only definition of the
-      1–5 bands and floor 4 — and none is below its floor.
+      1–5 bands and floor 4 — and none is below its floor. On a 2D build the six ship axes are
+      read through the 2D table in that file; the floor and the five-of-six rule do not move.
 - [ ] The three hard constraints in `SKILL.md` §2A are declared: SSAO **and** depth-aware
       volumetrics in the shipped pipeline, free-look mouse by default (or
       `DRAG_LOOK_OPT_IN` because the brief asked for drag), and ≥ 2 self-review rounds with
-      re-shots.
+      re-shots (**3D only** — a 2D build still owes the two rounds and the re-shots).
 - [ ] That score was written **on screenshots**, not on code, with the weakest axis named and
       every below-floor axis repaired and the same shot re-captured. Loop and evidence:
       `references/visual-self-review.md`.
@@ -25,22 +27,25 @@ to happen.
 
 ```bash
 python scripts/check_single_file.py path/to/game.html --strict
-python scripts/check_single_file.py path/to/game.html --strict --craft   # 3D deliverable
+python scripts/check_single_file.py path/to/game.html --strict --craft   # ship gates
 ```
 
-`--craft` is **mandatory** for a shipped 3D game: it fails on a missing `PIPELINE-RECEIPT`
-(or a receipt with unreviewed passes, an uncalled factory, or an opaque generated reference),
-missing geometry craft, a missing named material library, missing generated textures, bones
-without skinning, **missing SSAO, missing depth-aware volumetrics, drag-gated mouse look, or no
-`SELF-REVIEW` record**. It prints an `img2threejs receipt: N model(s) verified` line, then the
-craft groups and the hard constraints separately (`4/4` and `4/4`); a file needs all three.
-Starters and in-progress scaffolds are exempt. See `references/asset-craft.md`,
-`SKILL.md` Step 3 and `references/visual-self-review.md`.
+`--craft` is **mandatory** for anything you ship. For 3D it fails on a missing
+`PIPELINE-RECEIPT` (or a receipt with unreviewed passes, an uncalled factory, or an opaque
+generated reference), missing geometry craft, a missing named material library, missing
+generated textures, bones without skinning, **missing SSAO, missing depth-aware volumetrics,
+drag-gated mouse look, or no `SELF-REVIEW` record**. It prints an `img2threejs receipt: N
+model(s) verified` line, then the craft groups and the hard constraints separately (`4/4` and
+`4/4`); a file needs all three. Starters and in-progress scaffolds are exempt. See
+`references/asset-craft.md`, `SKILL.md` Step 3 and `references/visual-self-review.md`.
 
-A 2D deliverable is audited with `--strict` alone; `--craft` on a non-3D file reports that the
-gate was skipped. The bundled `assets/starter-3d.html` reports
-`3D asset-craft signals: 2/4` and `3D hard constraints: 3/4`: it is a shell, and building its
-asset layer is the first task, not a verification step.
+For 2D, `--craft` enforces **only** the evidence: a `SELF-REVIEW` marker whose manifest hash and
+build fingerprint match this file, at least three frames, more than one view, and no axis scored
+above the cap its own frames produced. The asset layer is 3D-specific, so it is skipped — the
+`SELF-REVIEW` block is not. `--mode 2d|3d` only picks the size budget; detection decides the
+gate set. The bundled `assets/starter-3d.html` reports `3D asset-craft signals: 2/4` and
+`3D hard constraints: 3/4`: it is a shell, and building its asset layer is the first task, not a
+verification step.
 
 Manual confirmation of what the script cannot see:
 
@@ -51,7 +56,8 @@ Manual confirmation of what the script cannot see:
 - [ ] A 3D deliverable carries the **inlined three.js build** (`window.THREE`, version noted in
       a header comment). A 3D file without `THREE` markers fails the audit.
 - [ ] File size is justified: < 300 KB for 2D, < 2.5 MB for 3D with an inline three.js build;
-      anything larger needs a stated reason in the handoff.
+      anything larger needs a stated reason in the handoff. The auditor applies the right budget
+      on its own (`--mode auto`); pass `--mode 2d` when a file is ambiguous.
 - [ ] `view-source` shows one `<style>` and one `<script>` (plus optional JSON blobs).
 
 ## 2. Boot and shell
@@ -156,11 +162,14 @@ not just in code:
 - [ ] A material calibration row (roughness sweep × metalness 0/1) was inspected in frame.
 - [ ] `--strict --craft` reports `3D asset-craft signals: 4/4`.
 
-## 12. Hard constraints and visual self-review (3D deliverables only)
+## 12. Hard constraints and visual self-review
 
-- [ ] `check_single_file.py --strict --craft` reports `3D hard constraints: 4/4`
-      (SSAO, depth-aware volumetrics, free-look, `SELF-REVIEW` record with ≥ 2 rounds) and
-      reports no `frame metrics` failure.
+The SSAO and volumetrics boxes below are 3D-only. The capture, marker and structural boxes apply
+to both media — a 2D build owes the same two rounds, the same four shots and the same close-up.
+
+- [ ] `check_single_file.py --strict --craft` reports no `frame metrics` failure — on 2D as well
+      as 3D. On a 3D build the same run reports `3D hard constraints: 4/4`
+      (SSAO, depth-aware volumetrics, free-look, `SELF-REVIEW` record with ≥ 2 rounds).
 - [ ] SSAO is rebuilt from a **scene depth texture**, hemisphere-sampled, depth-blurred, and
       applied to ambient radiance only — visible at crevices and contacts on screen.
 - [ ] Volumetrics ray-march to **scene depth**, are shadow-map tested, and shafts are visibly

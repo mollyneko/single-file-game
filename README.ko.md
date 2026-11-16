@@ -99,8 +99,8 @@ cd single-file-game
 python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
 
 # 2. GAME 블록을 교체하고 감사 실행
-python scripts/check_single_file.py orb-runner.html --strict
-python scripts/check_single_file.py night-shift.html --strict --craft   # 3D
+python scripts/check_single_file.py orb-runner.html --strict --craft    # 2D: 증거 게이트
+python scripts/check_single_file.py night-shift.html --strict --craft   # 3D: 전체 게이트
 
 # 3. 열기 — 더블클릭 또는:
 open orb-runner.html        # macOS
@@ -194,7 +194,7 @@ single-file-game/
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | 템플릿을 복사하고 제목·부팅 표기·저장 네임스페이스·강조색을 설정 |
 | `python scripts/check_single_file.py X.html --strict` | 원격 리소스, 네트워크 호출, 빠진 껍데기, 존재하지 않는 요소 ID, 과대 용량이면 실패 |
-| `python scripts/check_single_file.py X.html --strict --craft` | 3D 출하 게이트: 형상 가공·재질 라이브러리·생성 텍스처·스키닝 누락, **그리고** SSAO·깊이 인식 볼류메트릭·프리룩 마우스·`SELF-REVIEW` 기록 누락 시 실패(각 게이트 `4/4`) |
+| `python scripts/check_single_file.py X.html --strict --craft` | 출하 게이트. 3D: 형상 가공·재질 라이브러리·생성 텍스처·스키닝 누락, **그리고** SSAO·깊이 인식 볼류메트릭·프리룩 마우스·`SELF-REVIEW` 기록 누락 시 실패(각 게이트 `4/4`). 2D: `SELF-REVIEW` 점수를 이 빌드의 manifest로 뒷받침하지 못하면 실패 |
 | `python -m unittest discover -s tests -v` | 감사기와 스캐폴드를 정상/비정상 파일로 검증 |
 
 도구 모음의 핵심은 감사기입니다. 이 형식이 저지르기 쉬운 실수를 정확히 겨냥합니다. "일단" 추가한

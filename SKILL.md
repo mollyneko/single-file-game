@@ -124,6 +124,9 @@ Once the build first renders, run **at least two review rounds**. Each round is:
    ```
 
    Never review from source or memory; a capture whose shots all hash to one picture is rejected.
+   A 2D build answers the same four — `assets/starter-2d.html` already wires `?shot=`,
+   `?prewarm=` and `?seed=`, and its `char-closeup` zooms the entities — so there is no 2D
+   exemption from the protocol, only a different camera.
 2. **Score in writing** all nine axes against `references/scoring-rubric.md` — the six ship
    axes in §1 plus beauty/composition, structural plausibility and UI readability. That file
    owns the 1–5 bands and the floor; below-floor is a defect, not a taste difference. The same
@@ -199,13 +202,15 @@ The craft gate for a 3D deliverable is two sentences:
    not an alternative modeling route — a hand-built file can reach `4/4` there and still fail
    the receipt gate.
 
-The same `--craft` run also enforces §2A. It reports `3D hard constraints: n/4` — SSAO,
-depth-aware volumetrics, free-look mouse, and a `SELF-REVIEW` record with ≥2 rounds. It also
-checks the **frame metrics** behind that record: the manifest must exist, match its hash, have
-been captured from this build, and no axis may be scored above the cap its frames produced
-without a recorded override. The auditor checks signals, not beauty: the screenshots and the
-written score remain mandatory and are what the handoff is judged on. A file that passes the
-auditor with a detached hand has simply lied to it.
+The same `--craft` run also enforces §2A. On a 3D build it reports `3D hard constraints: n/4` —
+SSAO, depth-aware volumetrics, free-look mouse, and a `SELF-REVIEW` record with ≥2 rounds. It
+also checks the **frame metrics** behind that record: the manifest must exist, match its hash,
+have been captured from this build, and no axis may be scored above the cap its frames produced
+without a recorded override. On a 2D build only that second half runs — the asset layer does not
+exist, the evidence does, and `frame metrics: …` failures are the same failures. The auditor
+checks signals, not beauty: the screenshots and the written score remain mandatory and are what
+the handoff is judged on. A file that passes the auditor with a detached hand has simply lied to
+it.
 
 ## 4. Workflow
 
@@ -435,7 +440,7 @@ before definition. No classes unless state is genuinely per-instance.
 | `img2threejs/PIPELINE.md` | **The modeling pipeline**: stages, quality gates, review contracts, script reference (vendored, Apache-2.0) |
 | `img2threejs/forge/` | The pipeline scripts: intake, spec validation, factory generation, staged review, rig |
 | `THIRD_PARTY.md` | Provenance and license of the vendored img2threejs copy |
-| `references/procedural-art-2d.md` | 2D only: seeded palettes, shape primitives, tile baking, effects |
+| `references/procedural-art-2d.md` | 2D only: seeded palettes, shape primitives, tile baking, effects (the 2D reading of the nine axes is in the rubric, not here) |
 | `references/game-feel.md` | Hitstop, shake, easing, particles, audio layering, HUD motion |
 | `references/procedural-audio.md` | Any sound: SFX table, noise, step-sequenced music, mixing |
 | `references/input-and-mobile.md` | Touch, pointer lock fallback, gamepad, safe areas |
@@ -446,9 +451,9 @@ before definition. No classes unless state is genuinely per-instance.
 | `references/visual-self-review.md` | The mandatory shot → score → repair → re-shoot loop, the limb-connection checklist, defect recipes, report template |
 | `references/release-checklist.md` | The final pass; the ship gate, not a suggestion |
 | `assets/starter-3d.html` | Raw-WebGL2 reference slice for the post chain (HDR, shadows, volumetrics, SSAO, bloom, ACES) — a shell, not the modeling path; 3D deliverables inline three.js and build models with img2threejs |
-| `assets/starter-2d.html` | Runnable canvas shell, playable, juice included |
+| `assets/starter-2d.html` | Runnable canvas shell, playable, juice included; answers `?shot=`, `?prewarm=` and `?seed=` |
 | `scripts/scaffold.py` | Generate a named game from either shell |
-| `scripts/score_frame.py` | Capture the four review shots through the fixed protocol and measure them; prints the caps and the `SELF-REVIEW` metrics block |
+| `scripts/score_frame.py` | Capture the four review shots through the fixed protocol and measure them; prints the caps and the `SELF-REVIEW` metrics block; `crop` cuts a close-up when a build cannot zoom |
 | `scripts/check_single_file.py` | The format, craft, hard-constraint and frame-metrics gates |
 | `scripts/check_single_file.py` | Format audit; `--strict` and `--craft` are the gates |
 | `docs/method.md` | Why the constraints exist, and when not to use this method |

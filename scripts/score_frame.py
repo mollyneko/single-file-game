@@ -18,6 +18,10 @@ This script closes both halves.
             is bad at and a script is good at: black crush, clipped highlights, dynamic range,
             luma contrast, saturation, hue spread, edge density.
 
+  crop      cuts a region out of a frame and upscales it nearest-neighbour -- the character
+            close-up for a build that never implemented `?shot=` and cannot be zoomed by URL.
+            It is an inspection aid, not evidence: a score still has to come from the protocol.
+
 The output is deliberately not a score. It is a set of **caps**: a metric out of range caps the
 affected axes at 3, and a written score of 4 or 5 for that axis then fails the audit unless the
 `SELF-REVIEW` marker carries an explicit `override` for it -- the axis, the measured value and a
@@ -34,6 +38,7 @@ Usage:
     python scripts/score_frame.py capture game.html --out review/round-1
     python scripts/score_frame.py score review/round-1/manifest.json
     python scripts/score_frame.py image shot.png --json
+    python scripts/score_frame.py crop play.png closeup.png --box 440,200,260,280 --scale 3
 
 Exit codes: 0 ok (caps and warnings may be present), 1 protocol or IO failure, 2 --strict with
 a cap or a warning.
@@ -100,21 +105,26 @@ AXES = ("space", "light", "material", "reflection", "world", "budget",
         "beauty", "structure", "ui")
 
 
-# --- PNG decoding (standard library only) -------------------------------
+# Must match check_single_file.py exactly, or the manifest and the auditor disagree about which
+# build was photographed.
 HTML_COMMENT = re.compile(r"<!--[\s\S]*?-->")
+WHITESPACE = re.compile(r"\s+")
 
 
 def html_fingerprint(text: str) -> str:
-    """Hash the build's code, ignoring HTML comments.
+    """Hash the build's code, ignoring comments and layout.
 
     The manifest records which build produced the frames, and the HTML records the manifest's
-    hash -- a loop if both hashed the whole file. Comments are the only thing that changes when
-    the marker is written, and comments never render, so stripping them leaves a fingerprint that
-    identifies the code while staying stable across the write-back. Newlines are normalised so a
-    CRLF checkout fingerprints the same as an LF one.
+    hash -- a loop if both hashed the whole file. Only the marker changes when the hash is written
+    back, and it is an HTML comment, so stripping comments breaks the loop. Whitespace goes with
+    it: a marker pasted in as `<!-- … -->\\n` leaves a newline behind however the strip is
+    anchored, and that reads as a different build. The token stream is what identifies a build.
     """
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    return hashlib.sha256(HTML_COMMENT.sub("", normalized).encode("utf-8")).hexdigest()
+    body = WHITESPACE.sub("", HTML_COMMENT.sub("", text))
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+# --- PNG decoding (standard library only) -------------------------------
 def read_png(path: str | Path) -> tuple[int, int, bytes, bytes]:
     """Decode an 8-bit non-interlaced PNG into (width, height, rgb, alpha).
 
@@ -515,6 +525,52 @@ def print_manifest(manifest: dict) -> None:
     print("protocol: " + ("ok" if protocol else ("not judged (single shot)" if protocol is None else "failed")))
 
 
+def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
+    """Write an 8-bit RGB PNG. Screenshots come from the browser; this is only for crops."""
+    raw = bytearray()
+    stride = width * 3
+    for y in range(height):
+        raw.append(0)
+        raw += rgb[y * stride:(y + 1) * stride]
+
+    def chunk(kind: bytes, body: bytes) -> bytes:
+        return (struct.pack(">I", len(body)) + kind + body
+                + struct.pack(">I", zlib.crc32(kind + body) & 0xFFFFFFFF))
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
+                     + chunk(b"IDAT", zlib.compress(bytes(raw), 6)) + chunk(b"IEND", b""))
+
+
+def crop_frame(src: Path, dst: Path, box: tuple[int, int, int, int], scale: int) -> tuple[int, int]:
+    """Crop `box` (x, y, w, h in source pixels) and upscale it nearest-neighbour.
+
+    A build that ignores `?shot=` still has to be inspected, and a 40 px character hides every
+    structural defect. This produces the close-up without re-rendering: it is evidence of what
+    was already on screen, and it is not accepted as a protocol frame.
+    """
+    width, height, rgb, _alpha = read_png(src)
+    x, y, w, h = box
+    if w <= 0 or h <= 0:
+        raise ValueError("box width and height must be positive")
+    if scale < 1:
+        raise ValueError("scale must be >= 1")
+    if x < 0 or y < 0 or x >= width or y >= height:
+        raise ValueError(f"box origin {x},{y} is outside the {width}x{height} frame")
+    w = min(w, width - x)
+    h = min(h, height - y)
+    out_w, out_h = w * scale, h * scale
+    out = bytearray(out_w * out_h * 3)
+    for oy in range(out_h):
+        row = (y + oy // scale) * width
+        for ox in range(out_w):
+            source = (row + x + ox // scale) * 3
+            target = (oy * out_w + ox) * 3
+            out[target:target + 3] = rgb[source:source + 3]
+    write_png(dst, out_w, out_h, bytes(out))
+    return out_w, out_h
+
+
 def marker_fragment(manifest: dict, manifest_path: Path, html: Path) -> str:
     """The `metrics` block to paste into SELF-REVIEW, with a path relative to the HTML."""
     relative = os.path.relpath(manifest_path.resolve(), html.resolve().parent).replace("\\", "/")
@@ -555,6 +611,12 @@ def main(argv: list[str] | None = None) -> int:
     img.add_argument("--step", type=int, default=DEFAULT_SAMPLE_STEP)
     img.add_argument("--json", action="store_true")
     img.add_argument("--strict", action="store_true")
+
+    crp = sub.add_parser("crop", help="crop and upscale a frame for a close-up")
+    crp.add_argument("image", type=Path)
+    crp.add_argument("out", type=Path)
+    crp.add_argument("--box", required=True, help="x,y,w,h in source pixels")
+    crp.add_argument("--scale", type=int, default=3)
 
     args = parser.parse_args(argv)
 
@@ -597,6 +659,21 @@ def main(argv: list[str] | None = None) -> int:
         if args.strict and (manifest.get("reasons") or manifest.get("warnings")):
             return 2
         return 0
+    if args.action == "crop":
+        try:
+            box = tuple(int(v) for v in args.box.replace(" ", "").split(","))
+        except ValueError:
+            parser.error("--box must be x,y,w,h with integer pixel values")
+        if len(box) != 4:
+            parser.error("--box must be x,y,w,h with integer pixel values")
+        try:
+            out_w, out_h = crop_frame(args.image, args.out, box, args.scale)
+        except (OSError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(f"{args.out}  {out_w}x{out_h}  (crop {args.box} at {args.scale}x)")
+        return 0
+
     width, height, rgb, alpha = read_png(args.image)
     metrics = frame_metrics(rgb, alpha, width, height, args.step)
     manifest = {"frames": [{"shot": args.image.stem, "metrics": metrics}]}

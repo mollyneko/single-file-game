@@ -8,15 +8,18 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import struct
 import subprocess
 import sys
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CHECK = ROOT / "scripts" / "check_single_file.py"
 SCAFFOLD = ROOT / "scripts" / "scaffold.py"
+SCORE = ROOT / "scripts" / "score_frame.py"
 STARTERS = sorted((ROOT / "assets").glob("starter-*.html"))
 
 GOOD = """<!doctype html>
@@ -71,7 +74,9 @@ AXES = ("space", "light", "material", "reflection", "world", "budget",
 
 
 def frame_fingerprint(text: str) -> str:
-    return hashlib.sha256(re.sub(r"<!--[\s\S]*?-->", "", text).encode("utf-8")).hexdigest()
+    # Mirrors html_fingerprint in both scripts: comments and layout are not part of the build.
+    body = re.sub(r"\s+", "", re.sub(r"<!--[\s\S]*?-->", "", text))
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
 def write_frame_manifest(root: Path, html_path: Path, caps: dict | None = None,
@@ -144,6 +149,27 @@ const heroGroup = createHeroModel({ seed: SEED });""",
 
 # Asset craft is complete, but none of the four hard constraints are present.
 CRAFT_ONLY_3D = CRAFT_3D.replace(HARD_SNIPPET, "").replace(REVIEW, "")
+
+
+def write_png(path: Path, width: int, height: int, pixel) -> None:
+    """Minimal 8-bit RGB PNG, so the crop tests do not need an image library."""
+    raw = bytearray()
+    for y in range(height):
+        raw.append(0)
+        for x in range(width):
+            raw += bytes(pixel(x, y))
+
+    def chunk(kind: bytes, body: bytes) -> bytes:
+        return (struct.pack(">I", len(body)) + kind + body
+                + struct.pack(">I", zlib.crc32(kind + body) & 0xFFFFFFFF))
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
+                     + chunk(b"IDAT", zlib.compress(bytes(raw))) + chunk(b"IEND", b""))
+
+
+def png_size(path: Path) -> tuple[int, int]:
+    return struct.unpack(">II", path.read_bytes()[16:24])
 
 
 def run(script: Path, *args: str) -> subprocess.CompletedProcess:
@@ -273,10 +299,10 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("4/4", result.stdout)
 
-    def test_craft_gate_skips_2d(self):
-        result = self.audit(GOOD, "--strict", "--craft")
+    def test_2d_without_craft_only_notes_the_skipped_gates(self):
+        result = self.audit(GOOD, "--strict")
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("craft gate skipped", result.stdout)
+        self.assertIn("3D asset gates skipped", result.stdout)
 
     def test_starter_3d_is_not_blocked_without_craft(self):
         result = run(CHECK, str(ROOT / "assets" / "starter-3d.html"), "--strict")
@@ -301,7 +327,7 @@ class AuditTests(unittest.TestCase):
 
     def test_size_budget_allows_inline_engine(self):
         big = GOOD + "<!--" + "x" * (1500 * 1024) + "-->"
-        result = self.audit(big, "--strict")
+        result = self.audit(big, "--strict", "--mode", "3d")
         self.assertEqual(result.returncode, 0, result.stdout)
 
     # --- section 2A hard constraints ------------------------------------
@@ -470,11 +496,42 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("PIPELINE-RECEIPT gate not enforced", result.stdout)
 
-    def test_2d_skips_receipt_gate(self):
+    def test_2d_skips_the_asset_gates_but_not_the_evidence(self):
         result = self.audit(GOOD, "--strict", "--craft")
-        self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("craft gate skipped", result.stdout)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no SELF-REVIEW marker", result.stdout)
         self.assertNotIn("img2threejs receipt", result.stdout)
+        self.assertNotIn("3D hard constraint", result.stdout)
+
+    def test_2d_craft_accepts_a_backed_score(self):
+        result = self.audit(GOOD.replace("</head>", REVIEW + "\n</head>"), "--craft")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("2D build: 3D asset gates skipped", result.stdout)
+
+    def test_2d_craft_rejects_frames_from_another_build(self):
+        result = self.audit(GOOD.replace("</head>", REVIEW + "\n</head>"), "--craft",
+                            fingerprint="0" * 64)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("fingerprint mismatch", result.stdout)
+
+    def test_size_budget_follows_the_medium(self):
+        fat = GOOD.replace("<body>", "<body><!--" + "x" * 400_000 + "-->")
+        self.assertEqual(self.audit(fat, "--strict").returncode, 1)
+        self.assertIn("smaller visual budget", self.audit(fat, "--strict").stdout)
+        self.assertEqual(self.audit(fat, "--strict", "--mode", "3d").returncode, 0)
+
+    def test_marker_written_after_capture_keeps_the_manifest_valid(self):
+        """The normal order is capture first, then paste the block in. That must not invalidate it."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            p = root / "game.html"
+            p.write_text(GOOD, encoding="utf-8")
+            digest = write_frame_manifest(root, p)
+            p.write_text(GOOD.replace("</head>",
+                                      REVIEW.replace("__MANIFEST_SHA__", digest) + "\n</head>"),
+                         encoding="utf-8")
+            result = run(CHECK, str(p), "--craft")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_json_reports_pipeline_receipt(self):
         result = self.audit(CRAFT_3D, "--json", "--craft")
@@ -541,10 +598,10 @@ class FrameMetricsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("fewer than 3 frames", result.stdout)
 
-    def test_2d_build_is_not_asked_for_frames(self):
+    def test_2d_shell_is_not_asked_for_frames(self):
         result = run(CHECK, str(ROOT / "assets" / "starter-2d.html"), "--strict", "--craft")
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("craft gate skipped", result.stdout)
+        self.assertIn("not enforced until the GAME block is replaced", result.stdout)
 
 
 class ScaffoldTests(unittest.TestCase):
@@ -563,6 +620,37 @@ class ScaffoldTests(unittest.TestCase):
             out = Path(d) / "a.html"
             run(SCAFFOLD, "--name", "X", "--out", str(out))
             self.assertEqual(run(SCAFFOLD, "--name", "X", "--out", str(out)).returncode, 1)
+
+
+class FingerprintTests(unittest.TestCase):
+    def test_both_scripts_agree_on_the_fingerprint(self):
+        """capture writes the manifest, the auditor re-reads it: the two must hash identically."""
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import check_single_file
+        import score_frame
+
+        text = (ROOT / "assets" / "starter-2d.html").read_text(encoding="utf-8")
+        for suffix in ("", "\n<!-- SELF-REVIEW {} -->", "<!-- x --><div></div>"):
+            self.assertEqual(check_single_file.html_fingerprint(text + suffix),
+                             score_frame.html_fingerprint(text + suffix))
+
+
+class CropTests(unittest.TestCase):
+    def test_crop_upscales_the_named_box(self):
+        with tempfile.TemporaryDirectory() as d:
+            src, out = Path(d) / "src.png", Path(d) / "out.png"
+            write_png(src, 8, 6, lambda x, y: (x * 10, y * 10, 50))
+            result = run(SCORE, "crop", str(src), str(out), "--box", "2,1,3,2", "--scale", "4")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(png_size(out), (12, 8))
+
+    def test_crop_rejects_a_box_outside_the_frame(self):
+        with tempfile.TemporaryDirectory() as d:
+            src, out = Path(d) / "src.png", Path(d) / "out.png"
+            write_png(src, 8, 6, lambda x, y: (0, 0, 0))
+            result = run(SCORE, "crop", str(src), str(out), "--box", "20,1,3,2")
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("outside", result.stderr)
 
 
 if __name__ == "__main__":

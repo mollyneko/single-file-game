@@ -100,8 +100,8 @@ cd single-file-game
 python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
 
 # 2. GAME ブロックを差し替えて、監査する
-python scripts/check_single_file.py orb-runner.html --strict
-python scripts/check_single_file.py night-shift.html --strict --craft   # 3D
+python scripts/check_single_file.py orb-runner.html --strict --craft    # 2D：証拠ゲート
+python scripts/check_single_file.py night-shift.html --strict --craft   # 3D：全ゲート
 
 # 3. 開く — ダブルクリック、または:
 open orb-runner.html        # macOS
@@ -195,7 +195,7 @@ single-file-game/
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | テンプレートを複製し、タイトル・起動表示・保存名前空間・アクセント色を設定 |
 | `python scripts/check_single_file.py X.html --strict` | リモート参照、通信呼び出し、欠けた殻、存在しない要素 ID、過大なサイズで失敗させる |
-| `python scripts/check_single_file.py X.html --strict --craft` | 3D の出荷ゲート：形状加工・材質ライブラリ・生成テクスチャ・スキニングの欠落、**および** SSAO・深度認識ボリューメトリック・フリールック・`SELF-REVIEW` 記録の欠落で失敗（各ゲート `4/4`） |
+| `python scripts/check_single_file.py X.html --strict --craft` | 出荷ゲート。3D：形状加工・材質ライブラリ・生成テクスチャ・スキニングの欠落、**および** SSAO・深度認識ボリューメトリック・フリールック・`SELF-REVIEW` 記録の欠落で失敗（各ゲート `4/4`）。2D：`SELF-REVIEW` の点数をこのビルドの manifest で裏づけられない場合に失敗 |
 | `python -m unittest discover -s tests -v` | 監査器とスキャフォールドを良品／不良品で検証 |
 
 このツール群の主役は監査器です。この形式が犯しがちなミスを狙い撃ちします。「とりあえず」足した

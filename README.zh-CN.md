@@ -108,8 +108,8 @@ cd single-file-game
 python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
 
 # 2. 替换 GAME 区块，然后审计
-python scripts/check_single_file.py orb-runner.html --strict
-python scripts/check_single_file.py night-shift.html --strict --craft   # 3D
+python scripts/check_single_file.py orb-runner.html --strict --craft    # 2D：证据门禁
+python scripts/check_single_file.py night-shift.html --strict --craft   # 3D：全部门禁
 
 # 3. 打开它 —— 双击即可，或者：
 start orb-runner.html       # Windows
@@ -200,7 +200,7 @@ single-file-game/
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | 复制模板，写入标题、启动标识、存档命名空间与强调色 |
 | `python scripts/check_single_file.py X.html --strict` | 对远程资源、网络调用、缺失的壳部件、悬空元素 ID、超大文件直接判失败 |
-| `python scripts/check_single_file.py X.html --strict --craft` | 3D 交付硬门槛：缺几何工艺、具名材质库、生成贴图、连续蒙皮，或缺 SSAO、深度感知体积光、鼠标自由视角、`SELF-REVIEW` 记录即失败（两道门禁各需 `4/4`） |
+| `python scripts/check_single_file.py X.html --strict --craft` | 交付硬门槛。3D：缺几何工艺、具名材质库、生成贴图、连续蒙皮，或缺 SSAO、深度感知体积光、鼠标自由视角、`SELF-REVIEW` 记录即失败（两道门禁各需 `4/4`）。2D：`SELF-REVIEW` 里任何拿不出本构建 manifest 佐证的分数即失败 |
 | `python -m unittest discover -s tests -v` | 用已知好/坏文件测试审计器与脚手架 |
 
 审计器是这条工具链的重点。它专门抓这个格式最容易犯的错：为图省事加上的 `<script src>`、忘了删的

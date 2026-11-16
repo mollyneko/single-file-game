@@ -20,7 +20,9 @@ at least one animated frame (the Capture step in `references/visual-self-review.
   hold an axis down, never lift it up. Score the rest by eye, but not above a cap your own frames
   set unless the marker records why — an unexplained 4 on a capped axis fails the audit.
 - **Six ship axes** (1–6) decide whether the frame reads as AAA. **Fewer than five of the six at
-  or above floor means it is a prototype**, whatever the feature list says.
+  or above floor means it is a prototype**, whatever the feature list says. This rule holds for
+  a 2D build too — see "The same nine axes on a 2D frame" for how the six are read without a
+  perspective camera.
 - **Three review axes** (7–9) decide whether the frame is watchable. Structural plausibility is
   a hard gate in its own right: a detached limb fails the build even if every other axis scores 5.
 - **Any axis below 4 is a defect to repair, not a stylistic difference.** Repair worst first,
@@ -56,7 +58,9 @@ capture, which is not a new dependency: §2A.A has always required screenshots a
 | Seed | 0 | Same world, both rounds; a new seed is a new build |
 
 If every shot comes back as the same picture, the build ignores `?shot=` and the capture is
-rejected — the frames were not separate views of anything.
+rejected — the frames were not separate views of anything. Inspect what you have with
+`score_frame.py crop shot.png closeup.png --box 440,200,260,280 --scale 3` while you fix it, but
+a crop is an inspection aid: it is not a protocol frame and cannot rescue the manifest.
 
 **Caps.** These are computed per frame and the worst frame wins; a clean wide shot does not
 cancel a blown close-up. The `title` card is exempt, because a flat title screen would trip every
@@ -206,6 +210,36 @@ the defect → repair recipes).
 
 Implementation → `references/design-language.md`, `references/resilience-and-a11y.md` and the
 HUD checks in `references/visual-self-review.md`.
+
+## The same nine axes on a 2D frame
+
+2D is opt-in (`SKILL.md` §0), not a lower standard: the floor stays 4, the six ship axes stay
+six, and fewer than five of six still means prototype. What changes is vocabulary — several of
+those axes are named after things a canvas has no equivalent for. Read them as the table says
+and score everything else exactly as above.
+
+| Axis | 2D reads as | 4 — the floor | 5 — exceeds it | 1–2 |
+| --- | --- | --- | --- | --- |
+| `space` | constructed depth | layered ground and backdrop, y-sorted occlusion, scale falloff or parallax | three depth layers, a foreground occluder, real parallax, consistent scale falloff | a single painted plane, nothing occludes, no scale change with distance |
+| `light` | shading discipline | one light direction, two-tone shading, contact shadows, distant layers darkened | rim light, painted occlusion, highlights that roll off, hit flash in the same palette | flat fills, light from several directions at once, pure-black ellipse shadows |
+| `material` | stroke consistency | 6–10 colour palette, two tones per material, one outline width and colour | per-material texture noise, hue by meaning, saturation ceiling — `references/procedural-art-2d.md` | full-saturation primaries, mixed outline widths, every object its own palette |
+| `reflection` | environmental response | water or ground reads as wet or reflective, glowing things have halos, highlights agree with the light | reflections follow the sky and break on ripples, additive FX share the palette | water is a flat gradient, halos are arbitrary colours |
+| `world` | set dressing | several families of decals or debris, seeded placement, density rising toward the play area | text, numbering or state markers, plus 2–3 variants per family | empty ground, unlabelled shapes |
+| `budget` | bake discipline | static art baked once, 60 fps median, no per-frame allocation | tiles and sprite atlas, under 200 blits, flat heap over five minutes | the map is repainted every frame, `shadowBlur` everywhere |
+| `beauty` | unchanged | as in the 3D band | as in the 3D band | as in the 3D band |
+| `structure` | silhouette integrity | one connected silhouette at rest and in one animated frame; props sit on their anchor | consistent eye line, outline width and proportion across the cast; hair and capes never cut a limb | parts float, proportions collapse, the character is a stack of circles |
+| `ui` | unchanged | as in the 3D band | as in the 3D band | as in the 3D band |
+
+A top-down game is not stuck at 2 on `space`. The axis asks whether depth is *constructed*:
+y-sorting, occlusion, scale falloff and parallax construct it, and a layered top-down field can
+reach 5. What scores 1 is a single painted plane where near and far have no relationship.
+
+**The measurable half does not change.** The red-line table above is about exposure, contrast,
+saturation and hue spread; a canvas frame is crushed and colourless in exactly the same way a
+WebGL frame is. `score_frame.py capture` drives the same four shots — `assets/starter-2d.html`
+wires `?shot=`, `?prewarm=` and `?seed=` for that reason, and a 2D build has no excuse for
+skipping them. On a 2D deliverable `check_single_file.py --craft` enforces the `SELF-REVIEW`
+block and its manifest, and skips only the 3D asset gates.
 
 ## `SELF-REVIEW` marker
 

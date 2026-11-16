@@ -4,6 +4,64 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.5] — 2026-11-16
+
+2D was supported and unscorable. The nine axes are written in 3D vocabulary — perspective
+camera, directional key light, five-channel materials — so a top-down canvas game could not
+honestly reach floor 4 on four of the six ship axes, and `release-checklist.md` asked for all
+nine axes at or above the floor anyway. The audit also stopped at the front door: `--craft` on a
+2D file reported "craft gate skipped", so a 2D deliverable shipped with no evidence at all,
+while the frame-metrics gate that exists precisely to hold a score to its own pixels only ever
+ran on 3D.
+
+### Added
+
+- `references/scoring-rubric.md`: **"The same nine axes on a 2D frame"** — one translation table
+  for the same nine axis names (constructed depth, shading discipline, stroke consistency,
+  environmental response, set dressing, bake discipline, plus the three review axes), with the
+  floor, the five-of-six ship rule and the repair order unchanged. A layered top-down field can
+  score 5 on `space`; what scores 1 is a single painted plane.
+- `score_frame.py crop IMAGE OUT --box x,y,w,h --scale 3` — nearest-neighbour close-up for a
+  build that cannot zoom by URL. An inspection aid, explicitly not a protocol frame: the rubric
+  and `visual-self-review.md` both say to add the preset afterwards.
+- `check_single_file.py --mode {auto,2d,3d}` with a per-medium size budget (<300 KB for 2D,
+  <2.5 MB for 3D). `auto` follows the build; the gate set still follows the build, so `--mode`
+  cannot talk a 2D file into 3D gates. Previously the auditor used the 3D budget for everything,
+  so a 400 KB 2D file passed a checklist that says 300 KB.
+
+### Changed
+
+- `--craft` on a **2D** deliverable now enforces the evidence half: a `SELF-REVIEW` marker whose
+  manifest hash and build fingerprint match this file, ≥3 frames, more than one view, and no
+  axis scored above the cap its own frames produced. The 3D asset gates are still skipped, and
+  the note says so. A 2D shell is still described, not failed, until its `GAME` block is replaced.
+- `assets/starter-2d.html` answers the capture protocol: `?shot=title|play|char-closeup|hero-effect`,
+  `?prewarm=` (fixed-step fast-forward with shards suppressed, so a warm-up cannot kill the run)
+  and `?seed=`. `char-closeup` zooms the entities, which is the 2D equivalent of moving the
+  camera in. Verified end to end: four shots, four distinct views, `protocol: ok`.
+- The same starter's star field is now painted from a seeded hash instead of `Math.random()`.
+  `procedural-art-2d.md` forbids random in a bake and the starter broke its own rule: every
+  resize repainted a different sky.
+- `release-checklist.md` §0/§1/§12, `SKILL.md` §2A.A and §3, `visual-self-review.md` and the four
+  READMEs describe one command for both media. The nine-axis and §2A boxes are now explicitly
+  3D-only where they are, so the checklist no longer contradicts the rubric on 2D.
+
+### Fixed
+
+- **The normal write-back order invalidated its own evidence.** Capture the frames, paste the
+  block in (`<!-- SELF-REVIEW … -->` + newline), audit → `the frames were captured from a
+  different build`. Stripping the comment left the newline that arrived with it, and the
+  fingerprint is whitespace-sensitive. `html_fingerprint` now hashes the token stream: comments
+  and layout are stripped before hashing, in both scripts, with a test that they agree.
+  **Existing manifests carry the old fingerprint and will read as a different build — re-capture
+  once.**
+
+### Tests
+
+61 (was 54): 2D evidence gate accepts a backed score, rejects a fingerprint mismatch, and
+survives a marker pasted in after the capture; the size budget follows the medium; `crop`
+upscales the named box and rejects a box outside the frame; both scripts fingerprint identically.
+
 ## [1.5.4] — 2026-11-14
 
 The rubric described a nine-axis score that was, in its own words, "an assertion". Nothing

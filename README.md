@@ -123,8 +123,8 @@ cd single-file-game
 python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
 
 # 2. replace the GAME block, then audit the result
-python scripts/check_single_file.py orb-runner.html --strict
-python scripts/check_single_file.py night-shift.html --strict --craft   # 3D
+python scripts/check_single_file.py orb-runner.html --strict --craft    # 2D: evidence gate
+python scripts/check_single_file.py night-shift.html --strict --craft   # 3D: full gates
 
 # 3. open it — double-click, or:
 open orb-runner.html        # macOS
@@ -219,7 +219,7 @@ Full reasoning in [`docs/method.md`](docs/method.md); operational detail in
 | --- | --- |
 | `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | Copies a template, sets the title, boot mark, save namespace and accent colour |
 | `python scripts/check_single_file.py X.html --strict` | Fails on remote resources, network calls, missing shell parts, dangling element IDs, oversized files |
-| `python scripts/check_single_file.py X.html --strict --craft` | 3D ship gates: fails on missing geometry craft, material library, generated textures or skinning, **and** on missing SSAO, depth-aware volumetrics, free-look mouse or a `SELF-REVIEW` record (`4/4` on each gate) |
+| `python scripts/check_single_file.py X.html --strict --craft` | Ship gates. 3D: fails on missing geometry craft, material library, generated textures or skinning, **and** on missing SSAO, depth-aware volumetrics, free-look mouse or a `SELF-REVIEW` record (`4/4` on each gate). 2D: fails on anything the `SELF-REVIEW` block cannot back with a manifest from this build |
 | `python -m unittest discover -s tests -v` | Tests the auditor and the scaffolder against known-good and known-bad files |
 
 The auditor is the point of the toolchain. It catches the mistakes that this format makes

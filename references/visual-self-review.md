@@ -69,7 +69,16 @@ chrome --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader \
 
 Frame the close-up **with the camera**, not by cropping a wide shot afterwards: a preset keeps
 the distance, angle and field of view stable, and a stable frame is what makes two scores
-comparable. Capture console errors in the same run — an `Uncaught`/`TypeError` is a defect of the
+comparable. The one legitimate crop is evidence for a build that has no presets yet —
+`score_frame.py crop frame.png closeup.png --box 440,200,260,280 --scale 3`. Use it to see the
+defect, then add the preset: a crop cannot be a protocol frame, and it will not match next round.
+
+A 2D build has the same obligation and no extra licence. `assets/starter-2d.html` answers
+`?shot=`, `?prewarm=` and `?seed=` out of the box — `char-closeup` zooms the entities, which is
+the 2D equivalent of moving the camera in — so the four shots and the six red lines apply
+unchanged.
+
+Capture console errors in the same run — an `Uncaught`/`TypeError` is a defect of the
 highest severity even when the frame looks fine; the capture script does not read the console, so
 do that once by hand.
 

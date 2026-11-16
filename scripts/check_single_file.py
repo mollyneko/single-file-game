@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-"""Audit a single-file HTML game against the format rules and the 3D ship gates.
+"""Audit a single-file HTML game against the format rules and the ship gates.
 
 Checks the things that actually break this format: remote resources, missing shell parts,
-dangling element IDs and runaway file size. With --craft it enforces the 3D ship gates: an
-inlined three.js build (mandatory, SKILL.md section 0), a PIPELINE-RECEIPT proving the models
-came out of the vendored img2threejs pipeline, the asset layer (bevel/curved geometry, a named
-material library, generated textures, continuous skinning) and section 2A's hard constraints
-(depth-based SSAO, depth-aware volumetrics, free-look mouse, a recorded visual self-review).
-A scaffold shell — a file that still carries the `GAME (replace this block)` marker — is
-reported as a shell: the 3D gates describe rather than fail until the block is replaced.
+dangling element IDs and runaway file size. With --craft it enforces the ship gates. For a 3D
+build that means an inlined three.js build (mandatory, SKILL.md section 0), a PIPELINE-RECEIPT
+proving the models came out of the vendored img2threejs pipeline, the asset layer (bevel/curved
+geometry, a named material library, generated textures, continuous skinning) and section 2A's
+hard constraints (depth-based SSAO, depth-aware volumetrics, free-look mouse, a recorded visual
+self-review). For a 2D build the asset layer does not exist, so --craft enforces only the
+evidence: a SELF-REVIEW marker whose manifest hashes match this build and no axis scored above
+the cap its own frames produced. A scaffold shell — a file that still carries the
+`GAME (replace this block)` marker — is reported as a shell: the gates describe rather than
+fail until the block is replaced.
 
     python check_single_file.py game.html
     python check_single_file.py game.html --strict
-    python check_single_file.py game3d.html --strict --craft   # 3D ship gates
+    python check_single_file.py game3d.html --strict --craft   # ship gates
+    python check_single_file.py game2d.html --strict --craft --mode 2d
     python check_single_file.py assets/*.html --json
 
 Exit codes: 0 = pass, 1 = failure (or any warning with --strict).
@@ -65,6 +69,10 @@ ERROR_BOUNDARY = [
 ]
 
 REDUCED_MOTION = re.compile(r"prefers-reduced-motion")
+
+# File-size expectation per medium: a 2D canvas build has no engine to inline, so
+# 300 KB is already a large visual budget; a 3D build carries a minified three.js.
+SIZE_BUDGET = {"2d": (300.0, 600.0), "3d": (1800.0, 2560.0)}
 
 # --- 3D asset-craft gate -------------------------------------------------
 # The gate cannot judge beauty; it proves the asset work was attempted. A 3D
@@ -196,17 +204,19 @@ SCORE_AXES = ("space", "light", "material", "reflection", "world", "budget",
               "beauty", "structure", "ui")
 MIN_OVERRIDE_REASON = 20
 HTML_COMMENT = re.compile(r"<!--[\s\S]*?-->")
+WHITESPACE = re.compile(r"\s+")
 
 
 def html_fingerprint(text: str) -> str:
-    """Hash the code, ignoring comments: the marker cannot hash the file that contains it.
+    """Hash the code, ignoring comments and layout: the marker cannot hash the file it is in.
 
     Comments are stripped because writing the marker's own hash into it must not change the
-    fingerprint. Newlines are normalised because the auditor decodes raw bytes while the capture
-    script reads text, and a CRLF checkout must fingerprint the same as an LF one.
+    fingerprint. Whitespace goes too: a marker pasted in as `<!-- … -->\\n` leaves a newline
+    behind however the strip is anchored, and that one newline used to read as a different build.
+    What survives is the token stream, which is what "this build" means here.
     """
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    return hashlib.sha256(HTML_COMMENT.sub("", normalized).encode("utf-8")).hexdigest()
+    body = WHITESPACE.sub("", HTML_COMMENT.sub("", text))
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
 def frame_metrics_status(text: str, base_dir: Path | None, fingerprint: str | None) -> tuple[list[str], list[str]]:
@@ -565,13 +575,14 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
     else:
         r.note(f"file is {r.size_kb:.0f} KB")
 
-    # --- 3D gates: three.js inline, asset craft, section 2A constraints ---
-    if IS_3D.search(text):
-        is_shell = SHELL_SIGNAL.search(text) is not None
-        r.shell = is_shell
-        if is_shell:
-            r.note("scaffold shell: replace the GAME block to make it a deliverable")
+    # --- gates: 3D adds the asset layer; 2D keeps the evidence layer ------
+    is_3d = bool(IS_3D.search(text))
+    is_shell = SHELL_SIGNAL.search(text) is not None
+    r.shell = is_shell
+    if is_shell:
+        r.note("scaffold shell: replace the GAME block to make it a deliverable")
 
+    if is_3d:
         if not THREE_SIGNAL.search(text):
             if is_shell:
                 r.note("shell has no inlined three.js build yet — a deliverable must (SKILL.md section 0)")
@@ -636,10 +647,20 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
         elif h_missing:
             r.note("3D hard constraints not enforced; ship with --strict --craft")
     elif craft:
-        r.note(
-            "not a 3D build: craft gate skipped. 3D is the default target (SKILL.md section 0); "
-            "if this was meant to be 3D, the renderer is the problem"
-        )
+        # The measurable half of the rubric is medium-agnostic: a 2D frame is exposed,
+        # crushed and colourless in exactly the same way a 3D one is. Only the asset layer
+        # (receipt, craft groups, section 2A) is 3D-specific.
+        if is_shell:
+            r.note("shell: frame-metrics gate not enforced until the GAME block is replaced")
+        else:
+            f_notes, f_problems = frame_metrics_status(text, path.parent, html_fingerprint(text))
+            for note in f_notes:
+                r.note(note)
+            for problem in f_problems:
+                r.fail(f"frame metrics: {problem} — see references/scoring-rubric.md")
+            r.note("2D build: 3D asset gates skipped (SKILL.md section 0); evidence still required")
+    else:
+        r.note("2D build: 3D asset gates skipped; ship with --strict --craft for the evidence gate")
 
     # --- informational ---------------------------------------------------
     canvases = len(re.findall(r"<canvas[\s>]", text, re.IGNORECASE))
@@ -670,10 +691,15 @@ def main(argv: list[str]) -> int:
         help="enforce the 3D ship gates: img2threejs receipt, asset craft and section 2A hard constraints",
     )
     ap.add_argument("--json", action="store_true", help="machine-readable output")
+    ap.add_argument(
+        "--mode", choices=("auto", "2d", "3d"), default="auto",
+        help="which size budget to apply; auto follows the build. The gate set always follows "
+             "the build — this only picks the file-size expectation (2D <300 KB, 3D <2.5 MB)",
+    )
     # A minified inline 3D engine (~800 KB) plus a generated asset layer is
     # legitimately 1-2 MB; do not warn away the budget this gate requires.
-    ap.add_argument("--warn-kb", type=float, default=1800.0)
-    ap.add_argument("--fail-kb", type=float, default=2560.0)
+    ap.add_argument("--warn-kb", type=float, default=None)
+    ap.add_argument("--fail-kb", type=float, default=None)
     args = ap.parse_args(argv)
 
     reports = []
@@ -681,7 +707,16 @@ def main(argv: list[str]) -> int:
         if not p.exists():
             reports.append(Report(path=p, failures=["file not found"]))
             continue
-        reports.append(audit(p, args.warn_kb, args.fail_kb, craft=args.craft))
+        mode = args.mode
+        if mode == "auto":
+            text = p.read_bytes().decode("utf-8", errors="replace")
+            mode = "3d" if IS_3D.search(text) else "2d"
+        warn_kb, fail_kb = SIZE_BUDGET[mode]
+        if args.warn_kb is not None:
+            warn_kb = args.warn_kb
+        if args.fail_kb is not None:
+            fail_kb = args.fail_kb
+        reports.append(audit(p, warn_kb, fail_kb, craft=args.craft))
 
     if args.json:
         print(json.dumps([r.as_dict() for r in reports], indent=2))
