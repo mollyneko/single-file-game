@@ -1,51 +1,49 @@
 # Release checklist
 
-Walk this before handing the file to anyone. A single unchecked box is a bug report waiting
-to happen.
+Walk this before giving a verdict. A single unchecked box is a bug report waiting to happen.
+The scripts cover the first section; the rest is the manual walk they cannot perform.
 
-## 0. Target declaration
+## 0. Verdict inputs
 
-- [ ] The build is **3D** — or, if it is 2D, the request asked for it or a one-line reason is
-      written down (a perspective camera would not improve the loop).
-- [ ] 2D was not chosen because 3D was hard, three.js was not rejected to keep the file small,
-      and no model was hand-assembled from primitives instead of using the img2threejs
-      pipeline (`SKILL.md` §0). Every model has a `PIPELINE-RECEIPT` marker in the HTML
-      (**3D only**).
+- [ ] The medium is recorded: 3D or 2D. On a 2D build the six ship axes are read through the
+      2D table in `references/scoring-rubric.md`; the floor and the five-of-six rule do not move.
+- [ ] A 3D brief answered with a 2D canvas is reported as a **target mismatch**, not quietly
+      accepted or quietly failed.
 - [ ] All nine axes (six ship axes + beauty / structural plausibility / UI readability) were
-      scored explicitly against `references/scoring-rubric.md` — the only definition of the
-      1–5 bands and floor 4 — and none is below its floor. On a 2D build the six ship axes are
-      read through the 2D table in that file; the floor and the five-of-six rule do not move.
-- [ ] The three hard constraints in `SKILL.md` §2A are declared: SSAO **and** depth-aware
-      volumetrics in the shipped pipeline, free-look mouse by default (or
-      `DRAG_LOOK_OPT_IN` because the brief asked for drag), and ≥ 2 self-review rounds with
-      re-shots (**3D only** — a 2D build still owes the two rounds and the re-shots).
-- [ ] That score was written **on screenshots**, not on code, with the weakest axis named and
+      scored explicitly against `references/scoring-rubric.md` — the only definition of the 1–5
+      bands and floor 4.
+- [ ] The three hard constraints are checked on screen on a 3D build: SSAO and depth-aware
+      volumetrics in the shipped frame, free-look mouse by default (or `DRAG_LOOK_OPT_IN` when
+      the brief asked for drag), and ≥ 2 self-review rounds with re-shots. A 2D build still owes
+      the two rounds and the re-shots.
+- [ ] The score was written **on screenshots**, not on code, with the weakest axis named and
       every below-floor axis repaired and the same shot re-captured. Loop and evidence:
       `references/visual-self-review.md`.
+- [ ] A scaffold shell (a kept `GAME (replace this block)` marker) is reported as a shell, not
+      judged as a deliverable.
 
-## 1. Format audit
+## 1. Machine gates
 
 ```bash
 python scripts/check_single_file.py path/to/game.html --strict
-python scripts/check_single_file.py path/to/game.html --strict --craft   # ship gates
+python scripts/check_single_file.py path/to/game.html --strict --craft   # full ship gates
+python scripts/score_frame.py capture path/to/game.html --out review/round-1
+python scripts/score_frame.py capture path/to/game.html --out review/round-2 --marker
 ```
 
-`--craft` is **mandatory** for anything you ship. For 3D it fails on a missing
+`--craft` is **mandatory** for a verdict above the format gate. For 3D it fails on a missing
 `PIPELINE-RECEIPT` (or a receipt with unreviewed passes, an uncalled factory, or an opaque
-generated reference), missing geometry craft, a missing named material library, missing
-generated textures, bones without skinning, **missing SSAO, missing depth-aware volumetrics,
-drag-gated mouse look, or no `SELF-REVIEW` record**. It prints an `img2threejs receipt: N
-model(s) verified` line, then the craft groups and the hard constraints separately (`4/4` and
-`4/4`); a file needs all three. Starters and in-progress scaffolds are exempt. See
-`references/asset-craft.md`, `SKILL.md` Step 3 and `references/visual-self-review.md`.
+generated reference), missing geometry craft, a missing named material library, missing generated
+textures, bones without skinning, **missing SSAO, missing depth-aware volumetrics, drag-gated
+mouse look, or no `SELF-REVIEW` record**. It prints an `img2threejs receipt: N model(s) verified`
+line, then the craft groups and the hard constraints separately (`4/4` and `4/4`); a file needs
+all three.
 
 For 2D, `--craft` enforces **only** the evidence: a `SELF-REVIEW` marker whose manifest hash and
 build fingerprint match this file, at least three frames, more than one view, and no axis scored
 above the cap its own frames produced. The asset layer is 3D-specific, so it is skipped — the
-`SELF-REVIEW` block is not. `--mode 2d|3d` only picks the size budget; detection decides the
-gate set. The bundled `assets/starter-3d.html` reports `3D asset-craft signals: 2/4` and
-`3D hard constraints: 3/4`: it is a shell, and building its asset layer is the first task, not a
-verification step.
+`SELF-REVIEW` block is not. `--mode 2d|3d` only picks the size budget; detection decides the gate
+set.
 
 Manual confirmation of what the script cannot see:
 
@@ -79,7 +77,7 @@ Manual confirmation of what the script cannot see:
 - [ ] Touch look works on the right half; the left half remains the virtual stick.
 - [ ] Touch targets ≥ 44 px, no overlap, thumbs do not cover critical HUD.
 - [ ] Gamepad dead zone applied; no drift.
-- [ ] Controls are documented in-game, not only in the README.
+- [ ] Controls are documented in-game, not only in a README.
 
 ## 4. Gameplay
 
@@ -99,7 +97,8 @@ Manual confirmation of what the script cannot see:
 
 ## 6. Performance
 
-- [ ] 60 fps median on a mid-range laptop; ≥ 30 fps on a low-end phone.
+- [ ] 60 fps median on a mid-range laptop; ≥ 30 fps on a low-end phone. On software rendering
+      (SwiftShader / no GPU), report **unverified** instead of quoting the number.
 - [ ] p99 frame time under 33 ms (check the debug overlay, not the eye).
 - [ ] No per-frame allocation growth: heap flat over a 5-minute run.
 - [ ] Adaptive quality steps down once and recovers; it does not oscillate.
@@ -133,26 +132,21 @@ Manual confirmation of what the script cannot see:
 
 - [ ] File name is stable and versioned: `game-name_v1.html`.
 - [ ] Open the file on a second machine, ideally another OS.
-- [ ] Report back: path, size, nine-axis score with the weakest axis named, known limits, next
-      step.
+- [ ] Report back: path, size, nine-axis score with the weakest axis named, known limits,
+      next step.
 
-## 11. Asset craft (3D deliverables only)
+## 11. Asset craft and provenance (3D deliverables only)
 
-Starters and in-progress scaffolds are exempt; a deliverable is not. Modeling runs through the
-vendored img2threejs pipeline (`img2threejs/PIPELINE.md`) — its strict-quality spec gate and
-staged reviews produce the geometry and material craft below. Confirm each item on screen,
-not just in code:
+The SSAO and volumetrics boxes belong to §12; this section judges what the asset layer proves.
+Confirm each item on screen, not just in code:
 
 - [ ] An inline minified **three.js** build is present (`window.THREE`), not a hand-written
       renderer.
-- [ ] Models were produced by the img2threejs pipeline: a sculpt spec plus a
-      `create...Model` factory called from the game source, with the spec seed recorded beside
-      the world seed. One `PIPELINE-RECEIPT` per model is present in the HTML, with all staged
-      passes reviewed `continue` and a render screenshot for each (`SKILL.md` Step 3).
-- [ ] If the reference images were generated, each is a transparent PNG (no baked backdrop,
-      floor or drop shadow) and the whole set shares one style — palette, lighting direction
-      and rendering treatment. The transparency and palette halves were checked at intake
-      (`check_reference_admission.py --generated`, `check_style_coherence.py`).
+- [ ] Every model carries a `PIPELINE-RECEIPT` in the HTML: a sculpt spec path, seed, a
+      `create...Model` factory that is actually called in the game source, and every staged pass
+      reviewed `continue` with a render screenshot. An unwitnessed receipt is a failed gate.
+- [ ] If reference images were generated, each declares a transparent PNG (no baked backdrop,
+      floor or drop shadow) and a style anchor shared by the set.
 - [ ] No box, sphere or capsule is used directly as a finished asset.
 - [ ] Hard surfaces are beveled; generated geometry recomputes normals; lathe seams are welded.
 - [ ] ≥ 12 named materials with albedo + roughness + metalness, looked up by name.
@@ -188,15 +182,14 @@ to both media — a 2D build owes the same two rounds, the same four shots and t
       no joint separates and no limb rotates around a distant pivot.
 - [ ] Every below-floor axis (per `references/scoring-rubric.md`) was repaired and the
       **same shot re-captured**; the handoff names the fixes with before/after evidence.
-- [ ] HUD stays legible over the 3D world; no panel overlaps the character.
+- [ ] HUD stays legible over the world; no panel overlaps the character.
 
 ## Red flags that mean "not done"
 
-- A 3D brief answered with a fixed-zoom top-down canvas scene.
+- A 3D brief answered with a fixed-zoom top-down canvas scene, reported as a pass.
 - A frame where nothing casts a shadow, so every object floats.
 - A game that can be lost but not restarted.
 - A canvas that renders only after the second resize.
-- Sound that works after clicking a button but not before (this one is fine — document it).
 - `requestAnimationFrame` started twice (double speed / double CPU).
 - Panels that stay in the DOM and capture clicks after closing.
 - A score that resets because the save key is different from the load key.
@@ -206,3 +199,4 @@ to both media — a 2D build owes the same two rounds, the same four shots and t
   animating (absolute bone positions in a parent-relative skeleton).
 - A self-review with one round, no close-up, or no re-shot after the fix.
 - A `SELF-REVIEW` marker claiming 5/5 while the screenshots show otherwise.
+- A confident score from a build that ignored `?shot=` — that is **not verifiable**, not a 1.

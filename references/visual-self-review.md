@@ -1,11 +1,11 @@
 # Visual self-review, with a repair loop
 
-**MUST.** `SKILL.md` §2A.A. This is the gate that catches the defects a format auditor cannot
+**MUST.** `SKILL.md` §5. This is the gate that catches the defects a format auditor cannot
 see: a hand floating 40 cm from its sleeve, a sky that clips, a cape that eats an arm, a whole
 frame that is technically complete and reads as a grey prototype.
 
 The auditor checks that work was *attempted*. It cannot tell a good frame from a bad one. This
-document is how the model judges its own output — and proves the judgement with pixels.
+document is how a reviewer judges a build — and proves the judgement with pixels.
 
 **Division of labour:** `references/scoring-rubric.md` defines the nine axes, their 1–5 bands
 and the ship floor. This file owns the *loop* — capture, score, repair, re-shoot, record — plus
@@ -73,10 +73,10 @@ comparable. The one legitimate crop is evidence for a build that has no presets 
 `score_frame.py crop frame.png closeup.png --box 440,200,260,280 --scale 3`. Use it to see the
 defect, then add the preset: a crop cannot be a protocol frame, and it will not match next round.
 
-A 2D build has the same obligation and no extra licence. `assets/starter-2d.html` answers
-`?shot=`, `?prewarm=` and `?seed=` out of the box — `char-closeup` zooms the entities, which is
-the 2D equivalent of moving the camera in — so the four shots and the six red lines apply
-unchanged.
+A 2D build has the same obligation and no extra licence. It answers `?shot=`, `?prewarm=` and
+`?seed=` with a zoom preset — `char-closeup` zooms the entities, which is the 2D equivalent of
+moving the camera in — so the four shots and the six red lines apply unchanged. A build that
+cannot answer them is **not verifiable**, not a candidate for a lower standard.
 
 Capture console errors in the same run — an `Uncaught`/`TypeError` is a defect of the
 highest severity even when the frame looks fine; the capture script does not read the console, so
@@ -97,7 +97,7 @@ measured value and the stylistic reason — repair the frame, or record the argu
 Write one integer per axis, name the weakest, and rank the defects worst-first. Structural
 plausibility is a hard gate: a detached limb fails the build regardless of the other eight.
 
-Also confirm the three hard constraints from §2A on screen: SSAO contact darkening at
+Also confirm the 3D hard constraints from `SKILL.md` §2 on screen: SSAO contact darkening at
 junctions, shafts that stop at geometry, and a camera that turns when the mouse simply moves.
 
 ### 3. Structural plausibility checklist
@@ -142,9 +142,9 @@ shadows land under feet/wheels, and repeated instances share a seeded transform 
 | "Beads on a string" | One primitive per bone, widened to hide gaps | One weighted continuous skinned mesh; no per-bone spheres as joints |
 | Whole frame grey / flat | Colour management, missing sRGB encode, or ambient-only lighting | Fix the transfer function and colour space **before** exposure; re-derive ambient/fog/rim from the sun |
 | Ground looks like TV static | Normal strength or texture repeat too high | Lower `normalScale`, raise texel density, reduce speckle in the baked albedo |
-| No contact shadows | No SSAO; painted ellipse under feet | Depth-texture SSAO, half-res, ambient-only (§2A.B) |
-| "God rays" shine through pillars | Radial bright-pass blur, not volumetrics | Depth-aware ray march with shadow-map test (§2A.B) |
-| Camera does nothing until a drag | Drag-gated `pointermove` | Unconditional mouse look; pointer lock optional (§2A.C) |
+| No contact shadows | No SSAO; painted ellipse under feet | Depth-texture SSAO, half-res, ambient-only |
+| "God rays" shine through pillars | Radial bright-pass blur, not volumetrics | Depth-aware ray march with shadow-map test |
+| Camera does nothing until a drag | Drag-gated `pointermove` | Unconditional mouse look; pointer lock optional |
 | Character hidden behind a slab | Misplaced mesh / near-plane clip | Check world positions and camera collision; re-shoot |
 
 ### 6. Evidence and record

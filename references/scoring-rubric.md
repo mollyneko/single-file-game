@@ -1,10 +1,10 @@
 # Scoring rubric — the nine axes
 
 **This file is the only definition of the axes, their 1–5 bands and the ship floor.**
-`SKILL.md` §1 is a one-screen index; `references/visual-self-review.md` owns the review *loop*
-(capture → score → repair → re-shoot); this file owns *what a score means*. Implementation
-detail stays in the reference linked at the end of each axis. Do not restate a band anywhere
-else — if a threshold changes, it changes here.
+`SKILL.md` §4 is a one-screen index; `references/visual-self-review.md` owns the review *loop*
+(capture → score → repair → re-shoot); this file owns *what a score means*. Each axis ends with
+what to look for on the frame. Do not restate a band anywhere else — if a threshold changes, it
+changes here.
 
 A frame is judged in ten seconds, not on feature count. Source is never evidence: score from
 real screenshots of the shipped `file://` artifact, including the upscaled character close-up and
@@ -105,7 +105,8 @@ reported and warned about, never capped — fog, night and desert are legitimate
 | 2 | Fixed zoom or a ground plane filling >70% of the frame; no occlusion |
 | 1 | Orthographic / top-down map, no depth cue at all |
 
-Implementation → `references/procedural-3d.md` (camera, generated textures, quality tiers).
+Look for: horizon placement, near/far occlusion on movement, and whether the foreground is a real
+object rather than a painted band.
 
 ### 2. Light — `light`
 
@@ -117,8 +118,8 @@ Implementation → `references/procedural-3d.md` (camera, generated textures, qu
 | 2 | Flat ambient plus brightness painted into albedo; ellipses drawn under feet |
 | 1 | No directional light concept; frame uniformly bright or black-crushed |
 
-Implementation → `references/cinematic-look.md` §1–§3 (sun, sky, shadows), §4 (volumetrics)
-and §5 (AO).
+Look for: shadow direction agreeing with the sky, darkening at contact points, and fog that
+thins with height — three cues that must come from one light direction.
 
 ### 3. Material — `material`
 
@@ -130,7 +131,8 @@ and §5 (AO).
 | 2 | One RGB triple per object; zero roughness variance |
 | 1 | Flat fills everywhere, no material identity |
 
-Implementation → `references/material-authoring.md`, `references/asset-craft.md`.
+Look for: a roughness × metalness calibration row inspected in frame, wear in primer → oxide
+order, and seams at plate scale rather than uniform noise.
 
 ### 4. Reflection — `reflection`
 
@@ -142,8 +144,8 @@ Implementation → `references/material-authoring.md`, `references/asset-craft.m
 | 2 | No reflection at all; specular is a white blob painted on |
 | 1 | No specular response; everything uniformly matte |
 
-Implementation → `references/cinematic-look.md` §2 (sky) and §8 (two-stop bug); the water case in
-`references/material-authoring.md`.
+Look for: the reflected horizon at the same height as the seen horizon, and a grazing-angle
+brightening that follows the same sky. A wrong reflected sky is worse than no reflection.
 
 ### 5. World detail — `world`
 
@@ -155,7 +157,8 @@ Implementation → `references/cinematic-look.md` §2 (sky) and §8 (two-stop bu
 | 2 | A tree is three colour blobs, a crate is a brown box |
 | 1 | Empty ground, unlabelled primitives |
 
-Implementation → `references/asset-craft.md`; for 2D builds `references/procedural-art-2d.md`.
+Look for: readable text or numbering, more than one debris family, and a density gradient toward
+the play area. Repeated props sharing one seeded transform table is a positive signal.
 
 ### 6. Budget — `budget`
 
@@ -167,7 +170,8 @@ Implementation → `references/asset-craft.md`; for 2D builds `references/proced
 | 2 | Post stack larger than the scene; visible frame-time spikes |
 | 1 | Per-frame geometry rebuild; multi-MB file with no stated reason |
 
-Implementation → `references/performance.md`.
+Look for: a flat heap over a five-minute run, no per-frame geometry rebuild, and a frame budget
+that holds on integrated graphics. Software-rendered fps is not budget evidence — say so.
 
 ### 7. Beauty / composition — `beauty`
 
@@ -179,8 +183,8 @@ Implementation → `references/performance.md`.
 | 2 | Overexposed or black-crushed, no focal point, or a global grey cast from a transfer-function bug |
 | 1 | Unreadable frame |
 
-Implementation → `references/cinematic-look.md` §7–§8 and the composition checklist in
-`references/visual-self-review.md`.
+Look for: one focal point, a readable value hierarchy, highlights that roll off, and no global
+grey cast. A grey frame is usually a transfer-function bug, not a palette choice.
 
 ### 8. Structural plausibility — `structure`
 
@@ -195,8 +199,8 @@ jump), never on the bind pose alone. A 40 px character hides every defect.
 | 2 | Floating hands, gap at the shoulder, weapon in mid-air, cape cutting an arm |
 | 1 | Beads-on-a-string, or limbs metres from the torso on the first bone rotation |
 
-Implementation → `references/visual-self-review.md` (the structural plausibility checklist and
-the defect → repair recipes).
+Look for: the upscaled close-up and an animated frame, not the bind pose. The checklist and the
+symptom → cause table are in `references/visual-self-review.md`.
 
 ### 9. UI readability — `ui`
 
@@ -208,8 +212,8 @@ the defect → repair recipes).
 | 2 | Overlapping panels, hidden HUD, clipped title text |
 | 1 | HUD unreadable or missing state entirely |
 
-Implementation → `references/design-language.md`, `references/resilience-and-a11y.md` and the
-HUD checks in `references/visual-self-review.md`.
+Look for: ≥4.5:1 contrast against the actual background, a scrim or shadow under text, and no
+panel covering the subject at any point in the captured loop.
 
 ## The same nine axes on a 2D frame
 
@@ -222,7 +226,7 @@ and score everything else exactly as above.
 | --- | --- | --- | --- | --- |
 | `space` | constructed depth | layered ground and backdrop, y-sorted occlusion, scale falloff or parallax | three depth layers, a foreground occluder, real parallax, consistent scale falloff | a single painted plane, nothing occludes, no scale change with distance |
 | `light` | shading discipline | one light direction, two-tone shading, contact shadows, distant layers darkened | rim light, painted occlusion, highlights that roll off, hit flash in the same palette | flat fills, light from several directions at once, pure-black ellipse shadows |
-| `material` | stroke consistency | 6–10 colour palette, two tones per material, one outline width and colour | per-material texture noise, hue by meaning, saturation ceiling — `references/procedural-art-2d.md` | full-saturation primaries, mixed outline widths, every object its own palette |
+| `material` | stroke consistency | 6–10 colour palette, two tones per material, one outline width and colour | per-material texture noise, hue by meaning, saturation ceiling | full-saturation primaries, mixed outline widths, every object its own palette |
 | `reflection` | environmental response | water or ground reads as wet or reflective, glowing things have halos, highlights agree with the light | reflections follow the sky and break on ripples, additive FX share the palette | water is a flat gradient, halos are arbitrary colours |
 | `world` | set dressing | several families of decals or debris, seeded placement, density rising toward the play area | text, numbering or state markers, plus 2–3 variants per family | empty ground, unlabelled shapes |
 | `budget` | bake discipline | static art baked once, 60 fps median, no per-frame allocation | tiles and sprite atlas, under 200 blits, flat heap over five minutes | the map is repainted every frame, `shadowBlur` everywhere |
@@ -236,10 +240,10 @@ reach 5. What scores 1 is a single painted plane where near and far have no rela
 
 **The measurable half does not change.** The red-line table above is about exposure, contrast,
 saturation and hue spread; a canvas frame is crushed and colourless in exactly the same way a
-WebGL frame is. `score_frame.py capture` drives the same four shots — `assets/starter-2d.html`
-wires `?shot=`, `?prewarm=` and `?seed=` for that reason, and a 2D build has no excuse for
-skipping them. On a 2D deliverable `check_single_file.py --craft` enforces the `SELF-REVIEW`
-block and its manifest, and skips only the 3D asset gates.
+WebGL frame is. `score_frame.py capture` drives the same four shots; a 2D build must answer
+`?shot=`, `?prewarm=` and `?seed=` with a zoom preset where a camera is unavailable, and has no
+excuse for skipping them. On a 2D deliverable `check_single_file.py --craft` enforces the
+`SELF-REVIEW` block and its manifest, and skips only the 3D asset gates.
 
 ## `SELF-REVIEW` marker
 

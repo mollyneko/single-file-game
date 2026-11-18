@@ -1,6 +1,7 @@
-"""Tests for the format auditor and the scaffolder.
+"""Tests for the evaluation scripts: the auditor and the frame scorer.
 
 Run: python -m unittest discover -s tests -v
+Fixtures are inline so the suite never depends on a build asset.
 """
 
 from __future__ import annotations
@@ -18,9 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CHECK = ROOT / "scripts" / "check_single_file.py"
-SCAFFOLD = ROOT / "scripts" / "scaffold.py"
 SCORE = ROOT / "scripts" / "score_frame.py"
-STARTERS = sorted((ROOT / "assets").glob("starter-*.html"))
 
 GOOD = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -209,10 +208,10 @@ class AuditTests(unittest.TestCase):
                     p.write_text(html.replace("__MANIFEST_SHA__", "0" * 64), encoding="utf-8")
             return run(CHECK, str(p), *flags)
 
-    def test_starters_pass_strict(self):
-        self.assertTrue(STARTERS, "no starter templates found")
-        result = run(CHECK, *[str(s) for s in STARTERS], "--strict")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+    def test_2d_deliverable_fixture_passes_strict(self):
+        result = self.audit(GOOD, "--strict")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("3D asset gates skipped", result.stdout)
 
     def test_good_file_passes(self):
         self.assertEqual(self.audit(GOOD).returncode, 0)
@@ -260,7 +259,7 @@ class AuditTests(unittest.TestCase):
         result = self.audit(BARE_3D, "--craft")
         self.assertEqual(result.returncode, 1)
         self.assertIn("three.js", result.stdout)
-        self.assertIn("SKILL.md section 0", result.stdout)
+        self.assertIn("SKILL.md §1", result.stdout)
 
     def test_three_js_gate_not_enforced_without_craft(self):
         result = self.audit(BARE_3D, "--strict")
@@ -280,10 +279,14 @@ class AuditTests(unittest.TestCase):
         self.assertIn("craft gate not enforced until the GAME block", result.stdout)
         self.assertIn("hard constraints not enforced until the GAME block", result.stdout)
 
-    def test_starter_3d_shell_passes_craft_flag(self):
-        # The bundled raw-WebGL2 starter is a shell: --strict --craft must not
-        # fail it, but it must say what a deliverable needs.
-        result = run(CHECK, str(ROOT / "assets" / "starter-3d.html"), "--strict", "--craft")
+    def test_raw_webgl_shell_passes_craft_flag(self):
+        # A raw-WebGL2 shell carrying the GAME marker is described, not failed —
+        # but the auditor must say what a deliverable needs.
+        shell = BARE_3D.replace(
+            "<script>",
+            "<script>\n/* ====== GAME (replace this block) ====== */",
+        )
+        result = self.audit(shell, "--strict", "--craft")
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("scaffold shell", result.stdout)
         self.assertIn("no inlined three.js build yet", result.stdout)
@@ -304,8 +307,8 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("3D asset gates skipped", result.stdout)
 
-    def test_starter_3d_is_not_blocked_without_craft(self):
-        result = run(CHECK, str(ROOT / "assets" / "starter-3d.html"), "--strict")
+    def test_raw_webgl_is_not_blocked_without_craft(self):
+        result = self.audit(BARE_3D, "--strict")
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("craft gate not enforced", result.stdout)
 
@@ -423,7 +426,7 @@ class AuditTests(unittest.TestCase):
         result = self.audit(bad, "--strict", "--craft")
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("no PIPELINE-RECEIPT marker", result.stdout)
-        self.assertIn("SKILL.md Step 3", result.stdout)
+        self.assertIn("references/release-checklist.md", result.stdout)
 
     def test_receipt_factory_must_be_called_in_game_source(self):
         bad = CRAFT_3D.replace("const heroGroup = createHeroModel({ seed: SEED });", "")
@@ -599,27 +602,27 @@ class FrameMetricsTests(unittest.TestCase):
         self.assertIn("fewer than 3 frames", result.stdout)
 
     def test_2d_shell_is_not_asked_for_frames(self):
-        result = run(CHECK, str(ROOT / "assets" / "starter-2d.html"), "--strict", "--craft")
+        shell = GOOD.replace("<script>", "<script>\n/* ====== GAME (replace this block) ====== */")
+        result = AuditTests.audit(self, shell, "--strict", "--craft")
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("not enforced until the GAME block is replaced", result.stdout)
 
 
-class ScaffoldTests(unittest.TestCase):
-    def test_generated_files_pass_audit(self):
-        with tempfile.TemporaryDirectory() as d:
-            out2 = Path(d) / "a.html"
-            out3 = Path(d) / "b.html"
-            self.assertEqual(run(SCAFFOLD, "--name", "Test Game", "--mode", "2d", "--out", str(out2)).returncode, 0)
-            self.assertEqual(run(SCAFFOLD, "--name", "Test Game", "--mode", "3d", "--out", str(out3)).returncode, 0)
-            result = run(CHECK, str(out2), str(out3), "--strict")
-            self.assertEqual(result.returncode, 0, result.stdout)
-            self.assertIn("Test Game", out2.read_text(encoding="utf-8"))
+class ReportTests(unittest.TestCase):
+    """The auditor's output is evidence for a judgment, so its shape is part of the contract."""
 
-    def test_refuses_overwrite(self):
-        with tempfile.TemporaryDirectory() as d:
-            out = Path(d) / "a.html"
-            run(SCAFFOLD, "--name", "X", "--out", str(out))
-            self.assertEqual(run(SCAFFOLD, "--name", "X", "--out", str(out)).returncode, 1)
+    def test_json_reports_size_notes_and_gate_fields(self):
+        result = AuditTests.audit(self, CRAFT_3D, "--json", "--craft")
+        payload = json.loads(result.stdout)[0]
+        self.assertGreater(payload["size_kb"], 0)
+        self.assertTrue(payload["notes"])
+        for key in ("craft_hits", "hard_hits", "pipeline_models", "pipeline_problems"):
+            self.assertIn(key, payload)
+
+    def test_manual_budget_flags_override_the_medium(self):
+        result = AuditTests.audit(self, GOOD, "--warn-kb", "0.1", "--fail-kb", "0.2")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("hard limit", result.stdout)
 
 
 class FingerprintTests(unittest.TestCase):
@@ -629,7 +632,7 @@ class FingerprintTests(unittest.TestCase):
         import check_single_file
         import score_frame
 
-        text = (ROOT / "assets" / "starter-2d.html").read_text(encoding="utf-8")
+        text = GOOD  # a fixture with comments and layout of its own
         for suffix in ("", "\n<!-- SELF-REVIEW {} -->", "<!-- x --><div></div>"):
             self.assertEqual(check_single_file.html_fingerprint(text + suffix),
                              score_frame.html_fingerprint(text + suffix))

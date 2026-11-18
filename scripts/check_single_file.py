@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
-"""Audit a single-file HTML game against the format rules and the ship gates.
+"""Audit a single-file HTML game — the machine half of the evaluation system.
 
-Checks the things that actually break this format: remote resources, missing shell parts,
+Checks the things that actually break the format: remote resources, missing shell parts,
 dangling element IDs and runaway file size. With --craft it enforces the ship gates. For a 3D
-build that means an inlined three.js build (mandatory, SKILL.md section 0), a PIPELINE-RECEIPT
-proving the models came out of the vendored img2threejs pipeline, the asset layer (bevel/curved
-geometry, a named material library, generated textures, continuous skinning) and section 2A's
-hard constraints (depth-based SSAO, depth-aware volumetrics, free-look mouse, a recorded visual
-self-review). For a 2D build the asset layer does not exist, so --craft enforces only the
-evidence: a SELF-REVIEW marker whose manifest hashes match this build and no axis scored above
-the cap its own frames produced. A scaffold shell — a file that still carries the
-`GAME (replace this block)` marker — is reported as a shell: the gates describe rather than
-fail until the block is replaced.
+build that means an inlined three.js build, a PIPELINE-RECEIPT (spec, seed, a factory that is
+actually called, reviewed passes), the asset layer (bevel/curved geometry, a named material
+library, generated textures, continuous skinning) and the hard constraints (depth-based SSAO,
+depth-aware volumetrics, free-look mouse, a recorded visual self-review). For a 2D build the
+asset layer does not exist, so --craft enforces only the evidence: a SELF-REVIEW marker whose
+manifest hashes match this build and no axis scored above the cap its own frames produced.
+A scaffold shell — a file that still carries the `GAME (replace this block)` marker — is
+reported as a shell: the gates describe rather than fail until the block is replaced.
 
-    python check_single_file.py game.html
+The auditor checks signals, never beauty. A pass is not a verdict; see SKILL.md §4 and
+references/scoring-rubric.md for the written half.
+
     python check_single_file.py game.html --strict
-    python check_single_file.py game3d.html --strict --craft   # ship gates
+    python check_single_file.py game3d.html --strict --craft
     python check_single_file.py game2d.html --strict --craft --mode 2d
-    python check_single_file.py assets/*.html --json
+    python check_single_file.py game*.html --json
 
 Exit codes: 0 = pass, 1 = failure (or any warning with --strict).
 """
@@ -59,7 +60,7 @@ ID_REF = [
 
 INLINE_HANDLER = re.compile(r"<[^>]+\son[a-z]+\s*=\s*[\"']", re.IGNORECASE)
 # Inline 3D engines ship loader classes that call fetch(). That is library code,
-# not a runtime request made by the game — see references/asset-craft.md.
+# not a runtime request made by the game.
 INLINE_LOADER_CTX = re.compile(r"THREE\.|FileLoader|ImageBitmapLoader|\bLoader\b", re.IGNORECASE)
 
 ERROR_BOUNDARY = [
@@ -76,20 +77,20 @@ SIZE_BUDGET = {"2d": (300.0, 600.0), "3d": (1800.0, 2560.0)}
 
 # --- 3D asset-craft gate -------------------------------------------------
 # The gate cannot judge beauty; it proves the asset work was attempted. A 3D
-# deliverable must show all four groups. See references/asset-craft.md.
+# deliverable must show all four groups. Judged by release-checklist.md §11.
 IS_3D = re.compile(
     r"getContext\(\s*['\"]webgl2|WebGL2RenderingContext|WebGLRenderer|"
     r"createShader|compileShader|\bTHREE\.",
     re.IGNORECASE,
 )
-# --- inlined three.js is mandatory (SKILL.md section 0) ------------------
+# --- inlined three.js is mandatory for 3D (SKILL.md §1) ------------------
 # The markers live inside the minified engine line, so this check runs on the
 # whole text, not the game-source strip: the library's presence is the point.
 THREE_SIGNAL = re.compile(
     r"window\.THREE\s*=|THREE\.WebGLRenderer|new\s+THREE\.", re.IGNORECASE
 )
-# A scaffold shell still carries the marker scaffold.py told the user to replace.
-# Shells are described, not failed: the asset layer is the user's first task.
+# A scaffold shell still carries the GAME marker. Shells are described, not failed:
+# they are not deliverables yet.
 SHELL_SIGNAL = re.compile(r"GAME\s*\(\s*replace this block\s*\)", re.IGNORECASE)
 BONE_SIGNAL = re.compile(
     r"BONE_DEFS|\bbones\b|\bSkeleton\b|computePose|poseEntity|\bskinning\b|\bboneIndex\b",
@@ -118,7 +119,7 @@ SKINNING_SIGNALS = [
     re.compile(r"skinning_vertex|skinnormal_vertex|boneWeights|bindMatrix", re.IGNORECASE),
 ]
 
-# --- 3D hard constraints (SKILL.md section 2A) --------------------------
+# --- 3D hard constraints (SKILL.md §1, layer 3) --------------------------
 # Signals, not beauty. A shipped 3D game must prove that depth-based SSAO,
 # depth-aware volumetrics, free-look mouse and a visual self-review exist.
 # The screenshots and written scores remain mandatory and are judged by a human.
@@ -143,11 +144,11 @@ LOOK_HANDLER_SIGNAL = re.compile(
 )
 SELF_REVIEW_RE = re.compile(r"<!--\s*SELF-REVIEW\s*(\{[\s\S]*?\})\s*-->", re.IGNORECASE)
 
-# --- img2threejs provenance (SKILL.md section 0 / Step 3) ---------------
-# A 3D deliverable must prove its models came out of the vendored pipeline.
-# One HTML-comment receipt per model: sculpt spec, spec seed, factory name and
-# the staged pass reviews. The factory also has to be CALLED in the game's own
-# source, so a receipt pasted onto a hand-built file cannot satisfy the gate.
+# --- img2threejs provenance (SKILL.md §1, layer 2) -----------------------
+# A 3D deliverable must declare where its models came from. One HTML-comment
+# receipt per model: sculpt spec, spec seed, factory name and the staged pass
+# reviews. The factory also has to be CALLED in the game's own source, so a
+# receipt pasted onto a hand-built file cannot satisfy the gate.
 PIPELINE_RECEIPT_RE = re.compile(
     r"<!--\s*PIPELINE-RECEIPT\s*(\{[\s\S]*?\})\s*-->", re.IGNORECASE
 )
@@ -310,7 +311,7 @@ def pipeline_receipt_status(text: str, source: str) -> tuple[list[str], list[str
     cannot honestly fill in: a `create...Model` factory that is actually called
     in the game source, and every staged pass recorded as reviewed `continue`
     with a render screenshot. Generated reference images must also declare the
-    transparent-background and style-anchor gates from SKILL.md section 0.
+    transparent-background and style-anchor declarations from release-checklist.md §11.
     """
     markers = list(PIPELINE_RECEIPT_RE.finditer(text))
     if not markers:
@@ -585,11 +586,11 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
     if is_3d:
         if not THREE_SIGNAL.search(text):
             if is_shell:
-                r.note("shell has no inlined three.js build yet — a deliverable must (SKILL.md section 0)")
+                r.note("shell has no inlined three.js build yet — a deliverable must (SKILL.md §1)")
             elif craft:
-                r.fail("3D deliverable without an inlined three.js build — see SKILL.md section 0")
+                r.fail("3D deliverable without an inlined three.js build — see SKILL.md §1")
             else:
-                r.note("no inlined three.js build detected; a 3D deliverable must inline it (SKILL.md section 0)")
+                r.note("no inlined three.js build detected; a 3D deliverable must inline it (SKILL.md §1)")
 
         p_models, p_problems = pipeline_receipt_status(text, game_src)
         r.pipeline_models, r.pipeline_problems = p_models, p_problems
@@ -605,7 +606,7 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
                 r.note("shell: PIPELINE-RECEIPT gate not enforced until the GAME block is replaced")
             else:
                 for problem in p_problems:
-                    r.fail(f"img2threejs receipt: {problem} — see SKILL.md Step 3")
+                    r.fail(f"img2threejs receipt: {problem} — see references/release-checklist.md §11")
         elif p_problems:
             r.note("img2threejs receipt not enforced; ship with --strict --craft")
 
@@ -629,7 +630,7 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
                 r.note("shell: craft gate not enforced until the GAME block is replaced")
             else:
                 for group in missing:
-                    r.fail(f"3D craft gate: {group} missing — see references/asset-craft.md")
+                    r.fail(f"3D craft gate: {group} missing — see references/release-checklist.md §11")
         elif missing:
             r.note("3D craft gate not enforced; ship with --strict --craft")
 
@@ -643,7 +644,7 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
                 r.note("shell: hard constraints not enforced until the GAME block is replaced")
             else:
                 for group in h_missing:
-                    r.fail(f"3D hard constraint: {group} missing — see SKILL.md section 2A")
+                    r.fail(f"3D hard constraint: {group} missing — see SKILL.md §1")
         elif h_missing:
             r.note("3D hard constraints not enforced; ship with --strict --craft")
     elif craft:
@@ -658,7 +659,7 @@ def audit(path: Path, warn_kb: float, fail_kb: float, craft: bool = False) -> Re
                 r.note(note)
             for problem in f_problems:
                 r.fail(f"frame metrics: {problem} — see references/scoring-rubric.md")
-            r.note("2D build: 3D asset gates skipped (SKILL.md section 0); evidence still required")
+            r.note("2D build: 3D asset gates skipped (SKILL.md §0); evidence still required")
     else:
         r.note("2D build: 3D asset gates skipped; ship with --strict --craft for the evidence gate")
 
@@ -688,7 +689,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
     ap.add_argument(
         "--craft", action="store_true",
-        help="enforce the 3D ship gates: img2threejs receipt, asset craft and section 2A hard constraints",
+        help="enforce the ship gates: 3D receipt/asset/hard constraints, or the 2D evidence chain",
     )
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument(

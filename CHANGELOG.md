@@ -4,6 +4,66 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] — 2026-11-18
+
+Restores the build mandate. 2.0.0 framed the skill as evaluation-only; this was the right
+scope for pruning files, but the wrong purpose. The skill exists to produce a frame with real
+visual impact. The evaluation system is the instrument that proves the frame got there, not the
+reason to open the skill.
+
+### Added
+
+- A **prime directive** at the top of `SKILL.md` and all four READMEs: the Chinese original kept
+  verbatim, followed by a direct translation in the document's language. It is written as one
+  constraint, not broken into interpretive bullets, and overrides everything below. The single-
+  file/offline boundary remains a separate hard boundary.
+- A compact **build flow** derived from the directive itself: lock the shell and visual thesis, then
+  构图 → 光影 → 材质 → 粒子 → 动画 → 空间氛围, then systems and the verify loop. It lives in
+  `SKILL.md` §1 and is summarised in all four READMEs. Each step must be visible in a protocol
+  frame; the old bundled authoring chain is not restored.
+
+### Changed
+
+- `SKILL.md` header, frontmatter description and §0 now describe a build-and-verify skill; the new
+  §1 carries the build flow and §5 is labelled the verify half of the build → verify loop. The six
+  layers, capture protocol, nine axes, gates and verdict format are unchanged — they are the
+  verification, not the goal.
+- Plugin and marketplace descriptions and keywords now lead with building; version 2.0.0 → 2.1.0.
+
+## [2.0.0] — 2026-11-18
+
+Breaking: this skill now **evaluates** single-file HTML games. Everything that built them is gone.
+
+The build path had grown to 410 tracked files, of which 371 were a vendored modeling pipeline.
+A reviewer had to wade through scaffolding, art, audio, input, rendering and persistence guides
+to reach the three files that actually define a verdict. The evaluation system is now the whole
+skill: one entry point, three rubric documents, two scripts and their tests.
+
+### Removed
+
+- `img2threejs/` (371 vendored files), `assets/starter-*.html`, `scripts/scaffold.py`,
+  `THIRD_PARTY.md`, `docs/` and thirteen authoring references (architecture, procedural 3D/2D,
+  cinematic look, material authoring, asset craft, game feel, audio, input, performance, state,
+  resilience, design language).
+- All build-workflow sections of `SKILL.md` (§0 modeling constraints, §§4–7, anti-patterns), and
+  the corresponding build instructions in the checklist and self-review guide.
+
+### Changed
+
+- `SKILL.md` is now the evaluation entry point: the six layers, the fixed capture protocol, the
+  nine-axis index, a six-step judging procedure, what the scripts can prove, and the verdict
+  format (`pass` / `prototype` / `not verifiable`). A build that ignores `?shot=` yields no score.
+- `references/scoring-rubric.md`, `references/visual-self-review.md` and
+  `references/release-checklist.md` are self-contained: no links to deleted authoring guides,
+  no "build it this way" instructions. The nine bands, floor 4, five-of-six rule, 2D translation
+  table, pixel red lines and capture → score → repair → re-shoot loop are unchanged.
+- `check_single_file.py` and `score_frame.py` keep every gate and metric; only their wording and
+  cross-references changed. The receipt gate still validates an external pipeline's claims without
+  vendoring that pipeline.
+- Tests 61 → 61: scaffold and starter-template tests replaced with inline fixtures and report
+  contract tests; no dependency on deleted files.
+- All four READMEs, the plugin manifests and CI now describe an evaluation tool.
+
 ## [1.5.5] — 2026-11-16
 
 2D was supported and unscorable. The nine axes are written in 3D vocabulary — perspective

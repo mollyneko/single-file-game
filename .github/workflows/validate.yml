@@ -35,35 +35,59 @@ jobs:
       - name: Unit tests
         run: python -m unittest discover -s tests -v
 
-      - name: Audit the starter templates against the format rules
-        run: python scripts/check_single_file.py assets/*.html --strict
-
-      - name: Check translations exist
-        run: |
-          for f in README.md README.zh-CN.md README.ja.md README.ko.md LICENSE CHANGELOG.md; do
-            test -s "$f" || { echo "missing: $f"; exit 1; }
-          done
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: JavaScript syntax of every template and generated game
+      - name: Validate manifests and documentation set
         run: |
           python - <<'PY'
-          import pathlib, re, subprocess, tempfile, os, sys
-          ok = True
-          for f in sorted(pathlib.Path("assets").glob("*.html")):
-              src = f.read_text(encoding="utf-8")
-              scripts = re.findall(r"<script>([\s\S]*?)</script>", src)
-              if not scripts:
-                  print(f"{f}: no inline script"); ok = False; continue
-              with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as t:
-                  t.write(scripts[-1]); path = t.name
-              r = subprocess.run(["node", "--check", path], capture_output=True, text=True)
-              os.unlink(path)
-              print(f"{f}: {'ok' if r.returncode == 0 else 'SYNTAX ERROR'}")
-              if r.returncode:
-                  print(r.stderr); ok = False
-          sys.exit(0 if ok else 1)
+          import json, pathlib, sys
+          plugin = json.loads(pathlib.Path(".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+          market = json.loads(pathlib.Path(".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+          assert plugin["version"] == market["plugins"][0]["version"], "version mismatch"
+          print("version ok:", plugin["version"])
+          for f in ("README.md", "README.zh-CN.md", "README.ja.md", "README.ko.md", "LICENSE", "CHANGELOG.md"):
+              assert pathlib.Path(f).stat().st_size > 0, f"missing: {f}"
+          print("documentation set ok")
+          PY
+
+      - name: No dangling relative links or deleted build paths
+        run: |
+          python - <<'PY'
+          import pathlib, re, sys
+          bad = []
+          docs = list(pathlib.Path(".").glob("*.md")) + list(pathlib.Path("references").glob("*.md"))
+          for md in docs:
+              for m in re.finditer(r"\]\(([^)#\s]+)(?:#[^)]*)?\)", md.read_text(encoding="utf-8")):
+                  target = m.group(1)
+                  if target.startswith(("http", "mailto")):
+                      continue
+                  if not (md.parent / target).resolve().exists():
+                      bad.append(f"{md}: {target}")
+          assert not bad, "broken links:\n" + "\n".join(bad)
+          stale = ("assets/starter", "img2threejs/PIPELINE.md", "scripts/scaffold.py", "references/asset-craft.md")
+          for p in list(docs) + list(pathlib.Path("scripts").glob("*.py")):
+              if p.name == "CHANGELOG.md":
+                  continue  # history may name files that no longer exist
+              text = p.read_text(encoding="utf-8")
+              for token in stale:
+                  assert token not in text, f"{p} still references deleted path {token}"
+          print(f"links ok: {len(docs)} documents")
+          PY
+
+      - name: Smoke-check the auditor on a fixture
+        run: |
+          python - <<'PY'
+          import pathlib, subprocess, sys, tempfile
+          fixture = '''<!doctype html><html lang="en"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+          <title>ok</title><style>@media (prefers-reduced-motion:reduce){*{animation:none}}</style></head>
+          <body><canvas id="cv"></canvas><script>addEventListener('error',()=>{});
+          addEventListener('unhandledrejection',()=>{});document.getElementById('cv').focus();</script>
+          </body></html>'''
+          with tempfile.TemporaryDirectory() as d:
+              p = pathlib.Path(d) / "game.html"
+              p.write_text(fixture, encoding="utf-8")
+              r = subprocess.run([sys.executable, "scripts/check_single_file.py", str(p), "--strict"],
+                                 capture_output=True, text=True)
+              assert r.returncode == 0, r.stdout + r.stderr
+              assert "3D asset gates skipped" in r.stdout, r.stdout
+          print("auditor smoke ok")
           PY

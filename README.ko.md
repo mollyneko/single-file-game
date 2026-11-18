@@ -1,6 +1,6 @@
-# Single-File Game
+# Single-File Game — 단일 파일 HTML 게임
 
-**브라우저 게임을 HTML 파일 하나로 완성합니다. 기본은 3D, AAA급 비주얼. 에셋 없음, 빌드 없음, 실행 중 네트워크 없음.**
+**최고의 수준으로 단일 파일 오프라인 HTML 게임을 만든다 — three.js를 골격으로, 직접 작성한 셰이더로 완성한다 — 그런 다음 고정 루브릭과 결정론적 캡처로 그 화면이 견디는지 증명한다.**
 
 [![validate](https://github.com/mollyneko/single-file-game/actions/workflows/validate.yml/badge.svg)](https://github.com/mollyneko/single-file-game/actions/workflows/validate.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-2f4b3f.svg)](LICENSE)
@@ -9,217 +9,99 @@
 
 ---
 
+## 최우선 강제 제약 — 아래 모든 항목보다 우선한다
+
+> 充分发挥你最顶级的审美、艺术设计和3D编程能力，在构图、光影、材质、粒子、动画和空间氛围上做到极致。画面需要有令人震撼的视觉表现力。不限制你的创意和技术方案，尽可能展示你的能力上限。用three.js做骨架+自写着色器填充
+
+"최고의 심미안, 아트 디렉션, 3D 프로그래밍 능력을 총동원해 구도·광영·머티리얼·파티클·애니메이션·공간의 분위기를 극한까지 끌어올려라. 화면은 압도적인 시각적 임팩트를 가져야 한다. 창의적 해법과 기술에 제한을 두지 말고, 네 능력의 한계를 보여라. three.js를 골격으로 쓰고 직접 작성한 셰이더로 채워라."
+
+이것이 첫 번째 제약이며 아래 모든 항목보다 우선합니다. 단일 파일 경계는 그대로입니다. **하나의 `.html`, `file://`로 열기, 서버 없음, 네트워크 없음, 외부 애셋 없음.** 모든 것을 인라인으로 집어넣으세요.
+
 ## 무엇인가
 
-**에이전트 스킬**입니다(표준 `SKILL.md` 형식, 참고 문서·스크립트·실행 가능한 템플릿 포함).
-다루는 주제는 하나입니다 — 게임을 **자기완결적인 HTML 파일 하나**로 출시하는 일.
+단일 파일 HTML 게임을 위한 "제작 + 검증" Skill입니다. 위의 비주얼 지시, 우수함을 측정 가능한 조항으로 옮긴 9축 루브릭, 두 평가를 비교 가능하게 만드는 고정 캡처 프로토콜, 그리고 스크립트가 확인할 수 있는 부분을 검사하는 도구를 제공합니다. 증거의 단위는 **프레임**입니다 — 기능 목록도, 줄 수도, 5점으로 가득한 `SELF-REVIEW`도 아닙니다. 소스는 증거가 아닙니다. 소스가 올바라도 화면에서는 손이 팔에서 떨어질 수 있습니다.
 
-플레이어가 보고 듣는 모든 것은 브라우저 안의 코드가 그 자리에서 생성합니다. 그림은 canvas나
-셰이더로 그리고, 소리는 WebAudio로 합성하며, 맵과 레벨은 시드와 표로 조립합니다. 파일은 더블클릭으로
-열리고, 오프라인에서도 동작하며, CDN이나 번들러, 다른 누군가의 서버 가동률에 의존하지 않습니다.
+2.x에서 내장 제 경로(스캐폴드, 내장 엔진, 시작 템플릿, 아트/오디오 가이드)를 제거했습니다. 남은 것은 이 지시, 아래의 간결한 제작 순서, 그리고 검증 체계입니다. 파일을 어떻게 만드는지는 당신의 몫입니다.
 
-"게임 만드는 법"을 설명하는 튜토리얼이 아닙니다. 실제 단일 파일 게임에서 뽑아내어 정말로 효과가 있는
-부분만 남긴 **실행 가능한 방법**과, 그 방법을 강제하는 도구 모음입니다.
+## 제작 흐름 — 지시를 워크플로로 바꾸기
 
-**기본 산출물은 3D입니다.** 2D는 요청할 때만 선택하는 노선이지, 기본 대안이 아닙니다.
+여섯 대상은 마지막에 채우는 체크리스트가 아니라 제작 순서입니다. 각 단계는 네 프로토콜 프레임 중 하나에 보여야 합니다.
 
-| 2D — 선택 노선, 완성된 게임 | 3D — 기본 노선, 완성된 게임 |
-| --- | --- |
-| ![2D game](docs/game-2d.png) | ![3D game](docs/game-3d.png) |
-| Canvas 2D · 189 KB · 3840×3840 세계, 4인 파티, 원소 반응, 퀘스트 | WebGL2 · 140 KB · 오픈 필드, HDR, 소프트 섀도, 볼류메트릭 |
+0. **골격과 비주얼 명제 고정.** 단일 인라인 `.html`, 첫 실행부터 `?shot=` / `?prewarm=` / `?q=` / `?seed=` 연결, 오류 경계와 DPR/리사이즈 처리. 초점, 팔레트, 빛 방향, 무드를 한 문장으로 적는다.
+1. **구도 / composition** — 카메라를 세계 안에 둔다. 세 깊이 층, 하나의 초점, 가치 위계. 디테일 전에 네 샷을 프레이밍한다.
+2. **광영 / light & shadow** — 읽히는 키 라이트 하나, 실제 그림자, 접촉 AO/SSAO, 깊이 안개와 볼류메트릭, 통일된 그레이드. 같은 태양·안개·그림자 데이터를 자작 셰이더로 흘린다.
+3. **머티리얼 / material** — 이름 있는 머티리얼 계열과 런타임 생성 맵. 기성 머티리얼이 표현하지 못하는 부분은 자작 GLSL이 맡고, 반사는 하늘과 일치해야 한다.
+4. **파티클 / particles** — 인스턴스 또는 GPU 구동으로 빛과 공간의 정보로 쓴다. 색종이 조각이 되면 안 된다.
+5. **애니메이션 / animation** — 연결된 리그 또는 디포머로 대기·이동·피격을 만든다. 이징, 히트스톱, 셰이크, 카메라 반응을 넣고 움직이는 프레임과 클로즈업을 확인한다.
+6. **공간의 분위기 / spatial atmosphere** — 플레이트, 데칼, 파편, 플레이 영역으로 갈수록 밀도가 오르는 구배, 시차, 안개. 블룸, 그레인, 비네트, 그레이드는 마지막에 둔다.
+7. **시스템 → 검증 루프.** 게임 루프를 닫고 입력·일시정지·재시작과 내구성을 연결한다. 3D라면 모델마다 `PIPELINE-RECEIPT` 하나를 유지한다. 그다음 아래의 여섯 계층 루프를 돈다: 캡처 → 채점 → 최악 축부터 수리 → 같은 네 장 재촬영. 두 라운드가 최소다.
 
-둘 다 같은 규칙으로 완성한 게임입니다. 각각 단일 파일이고, 지형과 캐릭터와 소품이 모두 실행 중에
-생성되며 디스크에 텍스처가 없습니다. 두 프레임 모두 네트워크를 끈 상태에서 `file://`로 실행했고,
-안에 이미지 파일은 하나도 없습니다. 왼쪽은 canvas 호출만으로 그린 세계, 오른쪽은 직접 작성한 포스트
-체인을 가진 실시간 WebGL2 렌더링입니다.
+프로토콜 프레임에 보이지 않는 단계는 수행되지 않은 것으로 간주합니다.
 
-### 여섯 축으로 평가한다
+## 여섯 계층 — 화면을 검증하는 방법
 
-**공간·빛·재질·반사·세계의 디테일·예산.** 카메라는 장면 안에 있고, 태양은 하나이며 그림자는 실제로
-계산되고, 재질에는 마모와 이음매가 있고, 반사는 지평선과 일치하며, 표면에는 아무도 읽지 않을 정보가
-얹혀 있고, 바이트는 엔진 재구현이 아니라 에셋에 쓰입니다. 여섯 중 둘을 놓치면 기능 목록이 아무리
-길어도 그것은 프로토타입입니다. 아홉 축의 1~5 등급과 합격선은
-[채점 기준](references/scoring-rubric.md)에만 정의되어 있습니다.
-[`SKILL.md` §1](SKILL.md#1-why-a-frame-reads-as-aaa-six-axes)은 색인일 뿐입니다.
+| # | 계층 | 도구 | 실패 조건 |
+| --- | --- | --- | --- |
+| 1 | 형식 | `check_single_file.py … --strict` | 외부 참조, 네트워크 호출, 누락된 id, `<title>`/viewport 누락, 오류 경계 없음 |
+| 2 | 공예(3D만) | 같은 실행에 `--craft` | 인라인 `three.js` 없음, 잘못된 `PIPELINE-RECEIPT`, 날것 프리미티브, RGB 전용 팔레트, 텍스처 없음, 스키닝 없음 |
+| 3 | 하드 제약(3D만) | 같은 실행 + 화면 확인 | SSAO 없음, 깊이 인식 볼류메트릭 없음, 드래그해야 시점이 움직임, 자기 검토 기록 없음 |
+| 4 | 프레임 지표 | `score_frame.py capture` + `--craft` | manifest/지문 불일치, 한 화면을 네 장으로 속임, 프레임이 정한 cap을 넘는 점수 |
+| 5 | 9축 | `references/scoring-rubric.md` | 4점 미만 축, 6개 출하 축 중 5개 미만 달성, 끊어진 팔다리 |
+| 6 | 출하 체크리스트 | `references/release-checklist.md` | 스크립트가 못 보는 부팅·입력·게임플레이·내구성·접근성·콘텐츠·전달 결함 |
 
-## 단일 파일은 '프로토타입 화질'의 변명이 아니다
-
-단일 파일은 제약이지, 회색 상자를 내놓을 이유가 아닙니다. 3D 템플릿은 작은 시네마틱 렌더러를
-하나의 `<script>` 안에 처음부터 끝까지 직접 작성한 참조 구현입니다.
-
-```
-섀도 맵 → HDR 씬(PBR 하늘·지면·오브젝트) → 볼류메트릭 광선
-        → SSAO + 양방향 블러 → Bloom 피라미드 → ACES + 그레이딩
-        → sRGB 인코딩 → FXAA + 그레인
-```
-
-> 템플릿은 일부러 렌더러를 직접 작성했습니다. 75 KB로 모든 패스를 한 번에 볼 수 있는 대신
-> 크래프트 게이트는 `2/4`입니다. 이것은 참조 슬라이스일 뿐 모델링 경로가 아닙니다. 출시할
-> 3D 게임은 **three.js 인라인 필수**, **모든 모델을 저장소에 수록한
-> [img2threejs](https://github.com/img2threejs/img2threejs) 파이프라인으로 생성 필수**
-> (`img2threejs/PIPELINE.md`). 두 규칙 모두 감사기가 확인하며, 후자는 `--strict --craft`가
-> 검증하는 `PIPELINE-RECEIPT` 마커로 보장합니다.
-
-무엇을 얻는가:
-
-- **태양 하나, 하늘 함수 하나.** 돔, 환경광, 안개색, 물웅덩이 반사가 모두 같은 `skyColor()`를
-  호출하므로 보이는 지평선과 물에 비친 지평선이 반드시 일치합니다.
-- **스케일이 있는 표면.** 재질마다 다섯 채널(알베도, 거칠기, 금속도, 높이, AO)에 프라이머 → 녹 순서의
-  마모, 오브젝트 공간의 판 이음새, 어두워지고 평평해지고 거울이 되는 습윤 마스크.
-- **대기.** 절반 해상도 레이마칭, Henyey-Greenstein 위상 함수, 높이 밀도, 단계별 그림자 조회.
-  "3D"와 "장소"의 차이가 여기서 납니다.
-- **필터가 아닌 그레이딩.** ACES, 냉온 분리, 비네트, 1.2% 그레인. 순서대로 적용하고 마지막에 한 번만
-  인코딩합니다.
-
-수치와 실패 모드는 [`references/cinematic-look.md`](references/cinematic-look.md)와
-[`references/material-authoring.md`](references/material-authoring.md)에 있습니다.
-
-템플릿은 직접 코드를 한 줄도 쓰기 전부터 이 화면을 보여줍니다:
-
-![3D 템플릿 기본 화면](docs/starter-3d.png)
-
-## 네 가지 규칙
-
-각 규칙은 실패 유형 하나를 통째로 제거합니다.
-
-| 규칙 | 의미 | 없어지는 문제 |
-| --- | --- | --- |
-| **파일 하나** | `<style>` 하나, `<script>` 하나, 외부 `src`/`href` 없음 | 파일 누락, CDN 장애 |
-| **에셋 0** | 그림은 그리기, 소리는 합성, 텍스처는 굽기 | 404, 라이선스, "에셋 미포함" |
-| **빌드 없음** | 순수 ES를 그대로 열기 | 툴체인 표류, "내 PC에서는 되는데" |
-| **네트워크 없음** | 실행 중 원격 요청 없음 | 오프라인 실패, 프라이버시 문제 |
+처음 다섯 계층은 수리 루프로 들어가는 입력입니다. 캡처 → 채점 → 최악의 축 수리 → 재촬영 → 재채점. 4계층은 매체를 가리지 않습니다. 2D 캔버스도 WebGL과 똑같이 암부 뭉개짐·과노출·색 바램이 발생합니다. 2~3계층은 2D에 없지만 점수는 있습니다.
 
 ## 빠른 시작
 
 ```bash
-git clone git@github.com:mollyneko/single-file-game.git
-cd single-file-game
+# 1. 머신 게이트. --mode는 크기 예산만 고른다; 게이트 집합은 빌드가 결정한다.
+python scripts/check_single_file.py game.html --strict --craft --mode auto
 
-# 1. 이미 플레이 가능한 게임 생성 (부팅·플레이·일시정지·저장 동작)
-python scripts/scaffold.py --name "Orb Runner" --mode 2d --out orb-runner.html
+# 2. 고정 캡처: 네 샷, 1280x720 @1, 200프레임 워밍업, high, seed 0.
+python scripts/score_frame.py capture game.html --out review/round-1
+python scripts/score_frame.py score review/round-1/manifest.json
+python scripts/score_frame.py capture game.html --out review/round-2 --marker
 
-# 2. GAME 블록을 교체하고 감사 실행
-python scripts/check_single_file.py orb-runner.html --strict --craft    # 2D: 증거 게이트
-python scripts/check_single_file.py night-shift.html --strict --craft   # 3D: 전체 게이트
-
-# 3. 열기 — 더블클릭 또는:
-open orb-runner.html        # macOS
-start orb-runner.html       # Windows
-xdg-open orb-runner.html    # Linux
+# 3. references/scoring-rubric.md에 따라 9축을 글으로 채점하고,
+#    최우선 제약을 향해 고치고 같은 프레임을 다시 찍은 뒤 release-checklist.md를 따른다.
 ```
 
-`--mode 3d`를 주면 WebGL2 경로가 됩니다. 두 템플릿 모두 완성된 껍데기입니다. 디자인 토큰, 부팅 화면,
-타이틀, HUD, 일시정지·결과 카드, 입력 레이어, 오디오 버스, 저장 버스, 에러 경계, 적응형 화질, 그리고
-직접 규칙을 넣을 전용 블록까지 들어 있습니다.
+빌드는 `?shot=title|play|char-closeup|hero-effect`, `?prewarm=`, `?q=`, `?seed=`에 응답해야 합니다. 네 장이 같은 그림이면 캡처는 거부되고 판정은 **검증 불가**입니다. 소스에서 점수를 추측하지 마세요. `score_frame.py crop shot.png out.png --box x,y,w,h --scale 3`은 관찰용 보조이며 프로토콜 프레임이 아닙니다. 헤드리스 Chrome, Edge 또는 `chrome-headless-shell`이 필요합니다(`--chrome PATH` / `CHROME_PATH`로 지정 가능).
 
-## 스킬로 설치
+## 채점
 
-**Claude Code / 플러그인 마켓플레이스**
+여섯 출하 축——공간, 빛, 머티리얼, 반사, 세계 디테일, 예산——이 AAA처럼 보이는지를 정하고, 세 검토 축——미학, 구조적 타당성, UI 가독성——이 볼 만한지를 정합니다. 각 축은 1~5점, **4점이 출하선**입니다. 여섯 축 중 다섯 개 미만이 통과하면 프로토타입입니다. 2D는 루브릭의 변환표로 같은 아홉 이름을 읽으며 기준은 그대로입니다. 픽셀 지표는 점수를 낮추기만 하고, cap을 넘긴 축에는 축 이름·실측값·양식적 이유가 담긴 `overrides`가 필요합니다.
 
-```bash
-/plugin marketplace add mollyneko/single-file-game
-/plugin install single-file-game
+`SELF-REVIEW` HTML 주석은 점수를 프레임에 묶는 영수증입니다:
+
+```html
+<!-- SELF-REVIEW {"rounds":2,
+  "shots":["title","play","char-closeup","hero-effect"],
+  "axes":{"space":5,"light":4,"material":5,"reflection":4,"world":4,"budget":4,
+          "beauty":4,"structure":5,"ui":5},
+  "fixes":["rig: parent-relative bone offsets","added depth-based SSAO"],
+  "reshoot":true,
+  "metrics":{"manifest":"review/round-2/manifest.json","sha256":"<manifest sha256>"}} -->
 ```
 
-**수동 설치 (`SKILL.md`를 읽을 수 있는 어떤 에이전트든)**
+감사기는 manifest 해시, 빌드 지문, 3개 이상 프레임, 둘 이상의 뷰, cap을 검사합니다. 숫자 자체는 판정하지 않습니다. 마커는 영수증이지 리뷰가 아닙니다.
 
-```bash
-git clone git@github.com:mollyneko/single-file-game.git
-cp -r single-file-game ~/.claude/skills/single-file-game      # Claude Code
-cp -r single-file-game ~/.workbuddy/skills/single-file-game   # WorkBuddy
-```
+## 파일
 
-저장소 루트가 곧 스킬 본체입니다 — `SKILL.md` + `references/` + `scripts/` + `assets/`.
-
-## 구성
-
-```
-single-file-game/
-├── SKILL.md                    방법: 규칙, 절차, 색인, 안티패턴
-├── references/
-│   ├── architecture.md         파일 구조, 씬 머신, 루프 계약, 리사이즈와 DPR
-│   ├── procedural-art-2d.md    시드 팔레트, 도형 기본기, 타일 굽기, 이펙트
-│   ├── procedural-3d.md        three.js 인라인, 생성 텍스처, 그레이딩, 화질 단계
-│   ├── cinematic-look.md       렌더 스택: 태양, 하늘, 그림자, 볼류메트릭, Bloom, 그레이드
-│   ├── asset-craft.md          크래프트 게이트 근거: 티어다운 증거, --craft 신호 그룹
-│   ├── material-authoring.md   PBR 채널, 마모, 이음새, 트라이플래너, 물, 베이크
-│   ├── game-feel.md            히트스톱, 흔들림, 이징, 파티클, 오디오 레이어, HUD 모션
-│   ├── procedural-audio.md     SFX 버스, 노이즈, 스텝 시퀀서 음악, 믹싱
-│   ├── input-and-mobile.md     단일 입력 의도, 터치 스틱, 포인터 락, 세이프 에어리어
-│   ├── state-and-persistence.md 저장 구조, 버전, 마이그레이션, 자동 저장
-│   ├── performance.md          프레임 예산, 굽기, 풀링, 적응형 화질
-│   ├── resilience-and-a11y.md  에러 경계, 단계적 축소, 모션 감소
-│   ├── design-language.md      토큰, 타입 스케일, 버튼, HUD 구성
-│   ├── scoring-rubric.md       아홉 축의 1~5 등급과 합격선 (채점 기준의 유일한 정의)
-│   ├── visual-self-review.md   촬영 → 채점 → 수정 → 재촬영 루프, 리그 체크리스트
-│   └── release-checklist.md    출시 전 체크리스트
-├── img2threejs/                수록한 모델링 파이프라인(Apache-2.0): 참조 이미지 →
-│   │                           리그 붙은 THREE.Group 팩토리. 진입점은 PIPELINE.md
-│   └── …                      forge/ 단계, grimoire/ 규칙, docs/, 자체 LICENSE
-├── assets/
-│   ├── starter-2d.html         바로 실행되는 Canvas 게임 껍데기
-│   └── starter-3d.html         순수 WebGL2 포스트체인 참조 슬라이스(껍데기이지 경로가 아님)
-├── scripts/
-│   ├── scaffold.py             템플릿에서 이름 있는 게임 생성
-│   ├── check_single_file.py    규칙에 비추어 파일 감사
-│   └── score_frame.py          채점용 네 샷을 찍고 측정
-├── docs/
-│   └── method.md               왜 이런 제약인지, 언제 쓰지 말아야 하는지
-├── THIRD_PARTY.md              수록한 파이프라인의 출처와 라이선스
-└── tests/                      두 도구의 단위 테스트
-```
-
-## 7단계 방법
-
-1. **한 문장으로 범위를 정한다.** 루프 하나, 주 동작 하나, 실패 상태 하나, 재시작 하나.
-2. **껍데기를 먼저 만든다.** 토큰 → 부팅 → 타이틀 → 캔버스 → HUD → 화면들 → 에러 경계.
-   그런 다음 수록한 img2threejs 파이프라인으로 모든 모델을 만들고 모델마다 `PIPELINE-RECEIPT`를
-   하나씩 남긴다(`SKILL.md` Step 3). `GAME` 블록은 그 뒤에 손댄다.
-3. **의존 순서로 시스템을 얹는다.** 루프와 리사이즈가 먼저, 입력이 다음, 게임플레이가 마지막.
-4. **한 컷처럼 조명한다.** 구도, 키 라이트 하나, 마모가 있는 재질, 대기, 그다음 후처리 체인.
-   노출을 만지기 전에 sRGB 인코딩을 확인한다.
-5. **콘텐츠는 데이터로.** 손으로 쓴 인스턴스가 아니라 표와 시드 생성기.
-6. **손맛은 의도적으로 설계한다.** 흔들림, 파티클, 팝, 클릭음, 대기 모션 — 모두 저렴하고 모두 점검 항목.
-7. **스스로 보고, 고치고, 다시 찍고, 감사한다.** 고정 프로토콜(`score_frame.py capture`: 네 개의
-   지정 샷, 고정 뷰포트, 프리웜 프레임, 시드)로 2라운드 이상 찍고
-   [채점 기준](references/scoring-rubric.md)에 따라 9개 축을 문서로 채점한다. 이유를 기록하지 않으면
-   그 프레임이 정한 상한을 넘는 점수는 쓸 수 없다. 그다음 `check_single_file.py --strict --craft`
-   (에셋 크래프트 **와** 세 가지 하드 제약)와 릴리스 체크리스트를 통과시킨다.
-
-근거는 [`docs/method.md`](docs/method.md), 실무 디테일은 [`SKILL.md`](SKILL.md)에 있습니다.
-
-## 도구
-
-| 명령 | 역할 |
+| 경로 | 역할 |
 | --- | --- |
-| `python scripts/scaffold.py --name "X" --mode 2d\|3d --out X.html` | 템플릿을 복사하고 제목·부팅 표기·저장 네임스페이스·강조색을 설정 |
-| `python scripts/check_single_file.py X.html --strict` | 원격 리소스, 네트워크 호출, 빠진 껍데기, 존재하지 않는 요소 ID, 과대 용량이면 실패 |
-| `python scripts/check_single_file.py X.html --strict --craft` | 출하 게이트. 3D: 형상 가공·재질 라이브러리·생성 텍스처·스키닝 누락, **그리고** SSAO·깊이 인식 볼류메트릭·프리룩 마우스·`SELF-REVIEW` 기록 누락 시 실패(각 게이트 `4/4`). 2D: `SELF-REVIEW` 점수를 이 빌드의 manifest로 뒷받침하지 못하면 실패 |
-| `python -m unittest discover -s tests -v` | 감사기와 스캐폴드를 정상/비정상 파일로 검증 |
+| `SKILL.md` | 제작 지시 + 검증 진입점: 최우선 제약, 여섯 면 제작 흐름, 여섯 계층, 프로토콜, 판정 절차, 결론 형식 |
+| `references/scoring-rubric.md` | 9축·1~5단계·하한·2D 변환표·레드라인의 유일한 정의 |
+| `references/visual-self-review.md` | 캡처 → 채점 → 수리 → 재촬영, 관절 체크리스트, 증상 → 원인 |
+| `references/release-checklist.md` | 최종 수동 점검 |
+| `scripts/score_frame.py` | 캡처, 픽셀 지표, cap, 크롭 |
+| `scripts/check_single_file.py` | 형식·공예·하드 제약·프레임 지표 게이트 |
+| `tests/` | 회귀 테스트(fixture는 모두 인라인) |
 
-도구 모음의 핵심은 감사기입니다. 이 형식이 저지르기 쉬운 실수를 정확히 겨냥합니다. "일단" 추가한
-`<script src>`, 지우지 않은 `fetch`, HTML만 고치고 JS에 남겨 둔 요소 ID, 어느새 3 MB가 된 파일.
-
+```bash
+python -m unittest discover -s tests -v
 ```
-FAIL  game.html  (1284.6 KB)
-  x  <script src> found at line 12 — the file must work offline
-  x  referenced but missing ids: hud-score, btn-retry
-  !  no prefers-reduced-motion handling
-```
-
-## 쓰지 말아야 할 때
-
-경계는 솔직하게 긋습니다. 실시간 동기화 멀티플레이, 대량의 수작업 아트나 음악 라이브러리, 장기적인
-팀 개발과 파일 단위 리뷰, 레벨별 딥링크나 A/B 테스트가 필요하다면 일반적인 빌드와 에셋 파이프라인을
-쓰세요.
-
-프로토타입, 데모, 게임 잼, 교육, 사내 도구, 작은 제품에서는 파일 하나가 타협이 아닙니다. 아이디어에서
-플레이어까지의 가장 짧은 길입니다.
-
-## 감사의 말
-
-3D 모델은 모두 수록한 [img2threejs](https://github.com/img2threejs/img2threejs)(Apache-2.0, [`THIRD_PARTY.md`](THIRD_PARTY.md) 참조)가 만들며, 저자분들께 감사드립니다.
 
 ## 라이선스
 
-MIT © [mollyneko](https://github.com/mollyneko)
+MIT. [LICENSE](LICENSE) 참조.
