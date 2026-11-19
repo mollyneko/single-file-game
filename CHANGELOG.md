@@ -10,9 +10,16 @@ All notable changes to this skill are documented here. The format follows
 
 - README hero images: `docs/game-3d.png` and `docs/game-2d.png`, a hero row in all four READMEs,
   and a `docs/` row in each Files table. Both are real rendered frames, not generated art: the 3D
-  frame is a three.js scene with self-written GLSL (portal, sky, ground, particles), the 2D frame is
-  a procedural-canvas night scene (layered parallax, neon, reflections, rain). They illustrate the
-  two media the rubric covers; they are not audit evidence.
+  frame is a sunlit forest rendered with inlined latest-release three.js and self-written GLSL
+  (bark, ground, leaf cards, light shafts, particles), the 2D frame is a procedural-canvas night
+  scene (layered parallax, neon, reflections, rain). They illustrate the two media the rubric
+  covers; they are not audit evidence.
+
+### Changed
+
+- 3D builds must now inline the **latest published three.js release**, checked at build time; old
+  vendored bundles are no longer acceptable. The 3D hero image was rebuilt as a forest scene under
+  that requirement and the prime directive.
 
 ## [2.1.0] — 2026-11-18
 

@@ -22,7 +22,8 @@ reached that target — it is the instrument, not the purpose.
 
 This is the highest-priority constraint in this skill and overrides everything below. The
 single-file boundary still applies: one `.html`, opened from `file://`, with no server, no network
-and no external assets.
+and no external assets. For 3D, inline the **latest published three.js release** — resolve the
+current version at build time and never copy an old vendored bundle into the deliverable.
 
 ## 0. What is being built and judged
 
@@ -49,8 +50,9 @@ step has to be visible in one of the four protocol frames (§3). A build is not 
 compiles. For a deliberate 2D brief, read the same six surfaces through the translation table in
 §4; the evidence and the floor do not move.
 
-0. **Lock the shell and the visual thesis.** One `.html`, `file://`, inline `three.js` and custom
-   GLSL; wire `?shot=` / `?prewarm=` / `?q=` / `?seed=` from the first run; add the error boundary,
+0. **Lock the shell and the visual thesis.** One `.html`, `file://`, inline the latest released
+   `three.js` (check the version at build time; no stale vendored copy) and custom GLSL; wire
+   `?shot=` / `?prewarm=` / `?q=` / `?seed=` from the first run; add the error boundary,
    resize and DPR handling. Write one sentence naming the focal point, palette, light direction and
    mood. Every later choice serves it. A 3D brief answered with 2D is a mismatch to report, not a
    shortcut.
