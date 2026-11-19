@@ -4,6 +4,16 @@ All notable changes to this skill are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- README hero images: `docs/game-3d.png` and `docs/game-2d.png`, a hero row in all four READMEs,
+  and a `docs/` row in each Files table. Both are real rendered frames, not generated art: the 3D
+  frame is a three.js scene with self-written GLSL (portal, sky, ground, particles), the 2D frame is
+  a procedural-canvas night scene (layered parallax, neon, reflections, rain). They illustrate the
+  two media the rubric covers; they are not audit evidence.
+
 ## [2.1.0] — 2026-11-18
 
 Restores the build mandate. 2.0.0 framed the skill as evaluation-only; this was the right

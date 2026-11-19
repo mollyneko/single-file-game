@@ -7,6 +7,17 @@
 
 [English](README.md) · **简体中文** · [日本語](README.ja.md) · [한국어](README.ko.md)
 
+<table>
+<tr>
+<td align="center" width="50%"><b>3D —— three.js 骨架 + 自写着色器</b><br>
+<img src="docs/game-3d.png" width="560" alt="3D 单文件游戏画面"></td>
+<td align="center" width="50%"><b>2D —— 程序化 canvas，分层烘焙</b><br>
+<img src="docs/game-2d.png" width="560" alt="2D 单文件游戏画面"></td>
+</tr>
+</table>
+
+_代表帧：single-file 3D 场景（three.js + 自写着色器）与 single-file 2D 场景（程序化 canvas）。证据单位是帧，不是功能列表。_
+
 ---
 
 ## 最高强制约束——优先级第一，压过以下所有条款
@@ -94,6 +105,7 @@ python scripts/score_frame.py capture game.html --out review/round-2 --marker
 | `references/release-checklist.md` | 最后的人工走查 |
 | `scripts/score_frame.py` | 取证、像素指标、caps、裁剪 |
 | `scripts/check_single_file.py` | 格式、工艺、硬约束、帧指标闸门 |
+| `docs/` | 配图：`game-3d.png`（three.js + 自写着色器）与 `game-2d.png`（程序化 canvas） |
 | `tests/` | 回归测试，fixture 全部内联 |
 
 ```bash

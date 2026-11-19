@@ -7,6 +7,17 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · **日本語** · [한국어](README.ko.md)
 
+<table>
+<tr>
+<td align="center" width="50%"><b>3D — three.js 骨格 + 自作 GLSL</b><br>
+<img src="docs/game-3d.png" width="560" alt="3D シングルファイルゲームの作例"></td>
+<td align="center" width="50%"><b>2D — プロシージャル canvas、レイヤー焼き込み</b><br>
+<img src="docs/game-2d.png" width="560" alt="2D シングルファイルゲームの作例"></td>
+</tr>
+</table>
+
+_代表フレーム：single-file の 3D シーン（three.js + 自作シェーダー）と 2D シーン（プロシージャル canvas）。証拠の単位は機能一覧ではなくフレームです。_
+
 ---
 
 ## 最優先の強制制約 — 以下すべてに優先する
@@ -96,6 +107,7 @@ python scripts/score_frame.py capture game.html --out review/round-2 --marker
 | `references/release-checklist.md` | 最終の手動ウォーク |
 | `scripts/score_frame.py` | 撮影、ピクセル指標、cap、クロップ |
 | `scripts/check_single_file.py` | フォーマット・クラフト・ハード制約・フレーム指標のゲート |
+| `docs/` | ヒーロー画像：`game-3d.png`（three.js + 自作シェーダー）と `game-2d.png`（プロシージャル canvas） |
 | `tests/` | 回帰テスト（fixture はすべてインライン） |
 
 ```bash

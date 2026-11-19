@@ -7,6 +7,17 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · **한국어**
 
+<table>
+<tr>
+<td align="center" width="50%"><b>3D — three.js 골격 + 자작 GLSL</b><br>
+<img src="docs/game-3d.png" width="560" alt="3D 단일 파일 게임 쇼케이스"></td>
+<td align="center" width="50%"><b>2D — 절차적 canvas, 레이어 베이크</b><br>
+<img src="docs/game-2d.png" width="560" alt="2D 단일 파일 게임 쇼케이스"></td>
+</tr>
+</table>
+
+_대표 프레임: single-file 3D 장면(three.js + 자작 셰이더)과 2D 장면(절차적 canvas). 증거의 단위는 기능 목록이 아니라 프레임입니다._
+
 ---
 
 ## 최우선 강제 제약 — 아래 모든 항목보다 우선한다
@@ -96,6 +107,7 @@ python scripts/score_frame.py capture game.html --out review/round-2 --marker
 | `references/release-checklist.md` | 최종 수동 점검 |
 | `scripts/score_frame.py` | 캡처, 픽셀 지표, cap, 크롭 |
 | `scripts/check_single_file.py` | 형식·공예·하드 제약·프레임 지표 게이트 |
+| `docs/` | 히어로 이미지: `game-3d.png`(three.js + 자작 셰이더) 및 `game-2d.png`(절차적 canvas) |
 | `tests/` | 회귀 테스트(fixture는 모두 인라인) |
 
 ```bash

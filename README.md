@@ -7,6 +7,18 @@
 
 **English** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
+<table>
+<tr>
+<td align="center" width="50%"><b>3D — three.js skeleton + custom GLSL</b><br>
+<img src="docs/game-3d.png" width="560" alt="3D single-file game showcase"></td>
+<td align="center" width="50%"><b>2D — procedural canvas, baked layers</b><br>
+<img src="docs/game-2d.png" width="560" alt="2D single-file game showcase"></td>
+</tr>
+</table>
+
+_Representative frames: a single-file 3D scene (three.js + self-written shaders) and a single-file
+2D scene (procedural canvas). The frame, not the feature list, is the unit of evidence._
+
 ---
 
 ## The prime directive — priority 1, overrides everything below
@@ -130,6 +142,7 @@ the caps. It does not judge the numbers. The marker is a receipt, not the review
 | `references/release-checklist.md` | The manual final walk |
 | `scripts/score_frame.py` | Capture, pixel metrics, caps, crop |
 | `scripts/check_single_file.py` | Format, craft, hard-constraint and frame-metrics gates |
+| `docs/` | Hero images: `game-3d.png` (three.js + custom shaders) and `game-2d.png` (procedural canvas) |
 | `tests/` | Regression tests with inline fixtures |
 
 ```bash
